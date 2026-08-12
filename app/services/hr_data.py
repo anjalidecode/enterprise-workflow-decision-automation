@@ -1,4 +1,4 @@
-"""Read-only access to simulated HR enterprise data."""
+"""Seed-data loader for the simulated HR system. JSON files are read-only."""
 
 from __future__ import annotations
 

@@ -2,18 +2,11 @@
 
 HR Operations workflow automation and decision-support platform. Specialized agents collaborate through shared structured state, coordinated by a LangGraph orchestrator. This is not a chatbot and not a single LLM with tools.
 
-## Current implementation (Module 1 — Agent Foundation)
+## Current implementation (Module 1 + Module 2)
 
-Module 1 delivers the first working multi-agent HR workflow:
+**Module 1 — Agent Foundation** delivered the Leave & Attendance workflow: nine specialized LangGraph nodes, shared `WorkflowState`, conditional routing, and human-approval handling.
 
-**Leave & Attendance** — job of checking whether an employee can take leave, using employee records, leave balances, and a deterministic HR policy.
-
-Agents communicate only through `WorkflowState`. Each agent is a separate LangGraph node with one responsibility. After validation, the graph branches:
-
-- valid and executable approval → Action Agent → Response Agent
-- validation failure, rejection, or human approval required → Response Agent (Action Agent is skipped)
-
-Module 1 uses deterministic Python logic in agent nodes so the workflow is testable without a Gemini API key. LLM settings are configured for later modules.
+**Module 2 — Tool Integration & Intelligent Action Execution** adds a reusable tool layer between agents and enterprise services. Agents no longer read JSON or call `app.services` for HR data. They request capabilities through a selector, registry, and executor.
 
 ## Architecture
 
@@ -21,35 +14,95 @@ Module 1 uses deterministic Python logic in agent nodes so the workflow is testa
 User Request
     │
     ▼
-Orchestrator Agent     identify workflow type
+Orchestrator Agent
     │
     ▼
-Planner Agent          parse request and define tasks
+Planner Agent
     │
     ▼
-Research Agent         load employee / leave-balance data
+Research Agent ──► employee.lookup, employee.leave_balance
     │
     ▼
-Policy Agent           evaluate leave policy rules
+Policy Agent ──► policy.lookup, policy.validate_leave
     │
     ▼
-Analysis Agent         compare data, policy, and request
+Analysis Agent ──► leave.impact
     │
     ▼
-Decision Agent         approve / reject / pending approval
+Decision Agent
     │
     ▼
-Validation Agent       verify the decision before any action
+Validation Agent
     │
-    ├── validation failed or human approval required or not executable
-    │     └──► Response Agent ──► END
+    ├── reject / invalid / human approval ──► Response ──► END
     │
-    └── valid executable approval
-          └──► Action Agent (simulated HR update)
-                 └──► Response Agent ──► END
+    └── approved + executable
+          └──► Action Agent ──► leave.balance.update, notification.send
+                 └──► Response ──► END
 ```
 
-Shared state lives in `app/orchestration/state.py`. Simulated HR data lives in `data/`. Agents do not read files directly; they use `app/services/`.
+Tool path used by Research, Policy, Analysis, and Action:
+
+```
+Agent
+  → Tool Selector     capability + allowlist + write guards
+  → Tool Registry     explicit name/capability lookup
+  → Tool Executor     validate, authorize, retry, log
+  → Tool
+  → Simulated HR store / notification service
+  → ToolResult
+  → WorkflowState (including tool_executions)
+```
+
+## Why the tool layer exists
+
+Module 1 agents imported services directly. That does not scale to Recruitment, Onboarding, or real HR/email APIs.
+
+The tool layer gives every workflow the same contract: typed inputs, authorization, retries, and an execution trace. Future Calendar, Email, or HRIS adapters register as tools with the same capabilities; agents do not change.
+
+## Tool registry, selector, and executor
+
+- **Registry** (`app/tools/registry.py`): explicit registration. Unknown names fail closed.
+- **Selector** (`app/tools/selector.py`): deterministic. An agent may only use `allowed_agents`. Write tools require the Action Agent and `validated=True`. No LLM tool-picking.
+- **Executor** (`app/tools/executor.py`): Pydantic input validation, authorization, tenacity retries for transient `SERVICE_ERROR` only, duration/attempt tracing, notification log fallback.
+
+## Seven leave tools
+
+| Tool | Capability | Side effect | Agent |
+|------|------------|-------------|-------|
+| `get_employee` | `employee.lookup` | read | research |
+| `get_leave_balance` | `employee.leave_balance` | read | research, analysis |
+| `get_leave_policy` | `policy.lookup` | read | policy |
+| `validate_leave_policy` | `policy.validate_leave` | read | policy |
+| `calculate_leave_impact` | `leave.impact` | read | analysis |
+| `update_leave_balance` | `leave.balance.update` | write | action |
+| `notify_employee` | `notification.send` | write | action |
+
+`update_leave_balance` is idempotent per `workflow_id` + employee + leave request, so retries cannot double-deduct. If notification still fails after retries, the executor records a log-only fallback and does not undo the leave update.
+
+## Simulated HR store
+
+JSON under `data/` is seed data only. `app/services/hr_store.py` loads it into memory. Workflow updates change the in-memory store. JSON files are never written. Tests call `reset_hr_store()` between runs.
+
+## Monitoring, validation, and errors
+
+Each tool call appends a `tool_executions` record to `WorkflowState` (tool, agent, success, attempts, duration, error code, redacted input). The CLI prints this trace.
+
+Validation is two-layered: tool input schemas plus the existing Validation Agent, which also checks that approve-path pending actions are registered write tools.
+
+Error codes: `NOT_FOUND`, `INVALID_INPUT`, `SERVICE_ERROR`, `FORBIDDEN`. Invalid input, forbidden access, and missing records are not retried.
+
+## Internship Module 2 mapping
+
+| Requirement | Implementation |
+|-------------|----------------|
+| Tool integration | Seven tools + catalog |
+| APIs / external systems | Service adapters behind tools (simulated now) |
+| Intelligent tool selection | Capability/allowlist selector |
+| Action execution | Action Agent + write tools |
+| Monitoring | `tool_executions` + CLI |
+| Validation and error handling | Schemas, write guards, typed errors |
+| Retry / fallback | tenacity + notification log fallback |
 
 ## Setup
 
@@ -62,7 +115,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-If `.venv` already exists, activate it and install requirements:
+If `.venv` already exists:
 
 ```bash
 source .venv/bin/activate
@@ -71,13 +124,9 @@ pip install -r requirements.txt
 
 ## Configuration
 
-Copy the example environment file and add a Gemini key only if you intend to use the LLM later. Module 1 does not require it.
-
 ```bash
 cp .env.example .env
 ```
-
-`.env.example` placeholders:
 
 ```
 GOOGLE_API_KEY=
@@ -85,25 +134,16 @@ GEMINI_MODEL=
 APP_ENV=development
 ```
 
-Do not commit a real API key. The default Gemini model in settings is `gemini-2.5-flash` when `GEMINI_MODEL` is left empty.
+Do not commit a real API key. Module 1 and Module 2 do not require Gemini. Default model in settings is `gemini-2.5-flash`.
 
 ## Run the leave workflow
 
-From the project root, with `.venv` activated:
-
 ```bash
 python run.py
-```
-
-Or pass a custom request:
-
-```bash
 python run.py "Check whether employee E001 can take 3 days of leave from 2026-08-17."
 python run.py "Check whether employee E002 can take 3 days of leave from 2026-08-17."
 python run.py "Check whether employee E001 can take 8 days of leave from 2026-08-17."
 ```
-
-Sample employees:
 
 | ID | Name | Annual balance | Status | Typical result for 3 days |
 |----|------|----------------|--------|---------------------------|
@@ -125,14 +165,14 @@ Tests are deterministic and do not call Gemini.
 
 - Only the Leave & Attendance workflow is implemented.
 - Agent nodes are deterministic; they do not call the LLM yet.
-- HR systems are simulated with local JSON files.
-- The Action Agent updates workflow state only; it does not persist changes to `data/`.
-- There is no dashboard, REST API, PostgreSQL, RAG, tool registry, or cloud deployment yet.
+- HR and notification systems are simulated in memory.
+- JSON seed files are not updated on disk (by design).
+- There is no dashboard, REST API, PostgreSQL, RAG, or cloud deployment yet.
 - Human approval is detected and reported; there is no approval UI.
+- Tool selection is policy-based, not LLM-based.
 
 ## Planned modules
 
-- **Module 2:** Tool integration, action execution against APIs/databases, monitoring, validation and error handling.
 - **Module 3:** Richer agent communication, short-term and long-term memory, shared knowledge.
 - **Module 4:** Remaining HR workflows (recruitment, onboarding, policy queries, performance, offboarding), dynamic orchestration, recommendations.
 - **Module 5:** REST APIs, web dashboard, monitoring, logging, deployment, and performance work.

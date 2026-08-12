@@ -20,6 +20,7 @@ REQUIRED_KEYS = {
     "errors",
     "requires_human_approval",
     "agent_outputs",
+    "tool_executions",
     "metadata",
 }
 
@@ -35,6 +36,7 @@ def test_create_initial_state_has_required_fields() -> None:
     assert state["current_stage"] == "start"
     assert state["completed_tasks"] == []
     assert state["agent_outputs"] == []
+    assert state["tool_executions"] == []
     assert state["errors"] == []
     assert state["requires_human_approval"] is False
     assert state["confidence"] == 0.0

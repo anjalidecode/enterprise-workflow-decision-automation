@@ -26,10 +26,11 @@ def decision_agent(state: WorkflowState) -> dict[str, Any]:
         )
         pending_actions = [
             {
-                "type": "simulate_leave_balance_update",
+                "type": "update_leave_balance",
                 "employee_id": leave_request.get("employee_id"),
                 "days": leave_request.get("days"),
                 "leave_type": leave_request.get("leave_type", "annual"),
+                "start_date": leave_request.get("start_date"),
             },
             {
                 "type": "notify_employee",

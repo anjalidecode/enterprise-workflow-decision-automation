@@ -17,6 +17,8 @@ from app.agents.research import research_agent
 from app.agents.response import response_agent
 from app.agents.validation import validation_agent
 from app.orchestration.state import WorkflowState, create_initial_state
+from app.services.hr_store import reset_hr_store
+from app.services.notifications import reset_notification_service
 
 AGENT_NODES = (
     "orchestrator",
@@ -80,9 +82,12 @@ def build_leave_workflow() -> CompiledStateGraph:
     return build_leave_graph().compile()
 
 
-def run_leave_workflow(user_request: str) -> WorkflowState:
+def run_leave_workflow(user_request: str, *, reset_runtime: bool = True) -> WorkflowState:
     """Execute a leave workflow run and return the final shared state."""
 
+    if reset_runtime:
+        reset_hr_store()
+        reset_notification_service()
     graph = build_leave_workflow()
     initial_state = create_initial_state(user_request)
     result = graph.invoke(initial_state)

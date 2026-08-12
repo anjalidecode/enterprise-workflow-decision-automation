@@ -1,4 +1,4 @@
-"""Research Agent: retrieve employee and leave-balance records."""
+"""Research Agent: retrieve employee and leave-balance records via tools."""
 
 from __future__ import annotations
 
@@ -6,13 +6,15 @@ from typing import Any
 
 from app.agents.common import leave_request_from_state, node_update
 from app.orchestration.state import WorkflowState
-from app.services import hr_data
+from app.tools.executor import invoke_tool, merge_tool_patches
 
 
 def research_agent(state: WorkflowState) -> dict[str, Any]:
     leave_request = leave_request_from_state(state)
     employee_id = leave_request.get("employee_id")
+    leave_type = leave_request.get("leave_type", "annual")
     errors: list[str] = []
+    patches: list[dict[str, Any]] = []
 
     if not employee_id:
         return node_update(
@@ -23,32 +25,53 @@ def research_agent(state: WorkflowState) -> dict[str, Any]:
             errors=["Research skipped: missing employee id."],
         )
 
-    employee = hr_data.get_employee(str(employee_id))
-    if employee is None:
-        errors.append(f"Employee {employee_id} was not found in the HR store.")
+    employee_result, employee_patch = invoke_tool(
+        state,
+        agent="research",
+        capability="employee.lookup",
+        payload={"employee_id": employee_id},
+    )
+    patches.append(employee_patch)
+
+    balance_result, balance_patch = invoke_tool(
+        state,
+        agent="research",
+        capability="employee.leave_balance",
+        payload={"employee_id": employee_id, "leave_type": leave_type},
+    )
+    patches.append(balance_patch)
+
+    if not employee_result.success:
+        errors.append(
+            employee_result.error_message
+            or f"Employee {employee_id} was not found in the HR store."
+        )
         retrieved = {
-            "source": "simulated_hr_store",
+            "source": employee_result.source,
             "found": False,
             "employee_id": employee_id,
+            "error_code": employee_result.error_code,
         }
         summary = f"No HR record found for {employee_id}."
         employee_data: dict[str, Any] = {}
     else:
-        balances = dict(employee.get("leave_balances", {}))
+        employee_data = dict(employee_result.data or {})
+        balance = (balance_result.data or {}).get("balance") if balance_result.success else None
+        if not balance_result.success:
+            errors.append(balance_result.error_message or "Leave balance lookup failed.")
         retrieved = {
-            "source": "simulated_hr_store",
+            "source": employee_result.source,
             "found": True,
-            "employee_id": employee["employee_id"],
-            "employment_status": employee.get("employment_status"),
-            "annual_leave_balance": balances.get("annual"),
-            "department": employee.get("department"),
-            "manager": employee.get("manager"),
+            "employee_id": employee_data.get("employee_id"),
+            "employment_status": employee_data.get("employment_status"),
+            "annual_leave_balance": balance,
+            "department": employee_data.get("department"),
+            "manager": employee_data.get("manager"),
         }
-        employee_data = employee
         summary = (
-            f"Retrieved {employee['name']} ({employee_id}): "
-            f"status={employee.get('employment_status')}, "
-            f"annual_balance={balances.get('annual')}."
+            f"Retrieved {employee_data.get('name')} ({employee_id}): "
+            f"status={employee_data.get('employment_status')}, "
+            f"annual_balance={balance}."
         )
 
     return node_update(
@@ -57,4 +80,5 @@ def research_agent(state: WorkflowState) -> dict[str, Any]:
         employee_data=employee_data,
         retrieved_data=retrieved,
         errors=errors,
+        **merge_tool_patches(*patches),
     )

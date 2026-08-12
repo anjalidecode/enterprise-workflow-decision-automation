@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Temporary CLI for running the Module 1 leave & attendance workflow."""
+"""Temporary CLI for running the leave & attendance workflow."""
 
 from __future__ import annotations
 
@@ -51,6 +51,22 @@ def main() -> None:
         print("  (none)")
     for index, output in enumerate(outputs, start=1):
         print(f"  {index}. {output.get('agent')}: {output.get('summary')}")
+
+    _print_section("Tool executions")
+    traces = result.get("tool_executions") or []
+    if not traces:
+        print("  (none)")
+    for index, trace in enumerate(traces, start=1):
+        status = "success" if trace.get("success") else "failure"
+        line = (
+            f"  {index}. {trace.get('tool_name')} "
+            f"agent={trace.get('agent')} {status} "
+            f"attempts={trace.get('attempts')} "
+            f"duration_ms={trace.get('duration_ms'):.1f}"
+        )
+        if trace.get("error_code"):
+            line += f" error={trace.get('error_code')}"
+        print(line)
 
     _print_section("Important state changes")
     employee = result.get("employee_data") or {}

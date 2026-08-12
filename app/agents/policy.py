@@ -1,4 +1,4 @@
-"""Policy Agent: load leave policy and evaluate deterministic rules."""
+"""Policy Agent: retrieve and evaluate leave policy through the tool layer."""
 
 from __future__ import annotations
 
@@ -6,65 +6,58 @@ from typing import Any
 
 from app.agents.common import leave_request_from_state, node_update
 from app.orchestration.state import WorkflowState
-from app.services.hr_data import load_leave_policy
+from app.tools.executor import invoke_tool, merge_tool_patches
 
 
 def policy_agent(state: WorkflowState) -> dict[str, Any]:
-    policy = load_leave_policy()
-    rules = dict(policy.get("rules", {}))
     leave_request = leave_request_from_state(state)
-    employee = state.get("employee_data") or {}
-    days = leave_request.get("days")
-    leave_type = leave_request.get("leave_type", "annual")
+    errors: list[str] = []
 
-    violations: list[str] = []
-    warnings: list[str] = []
-    requires_human_approval = False
-
-    min_days = int(rules.get("minimum_days_per_request", 1))
-    max_days = int(rules.get("maximum_days_per_request", 15))
-    approval_threshold = int(rules.get("human_approval_required_if_days_gte", 5))
-
-    if days is None:
-        violations.append("Requested leave duration is missing.")
-    else:
-        if days < min_days:
-            violations.append(f"Requested {days} day(s) is below the minimum of {min_days}.")
-        if days > max_days:
-            violations.append(f"Requested {days} day(s) exceeds the maximum of {max_days}.")
-        if days >= approval_threshold:
-            requires_human_approval = True
-            warnings.append(
-                f"Requests of {approval_threshold} or more days require human approval."
-            )
-
-    if rules.get("require_active_employment") and employee:
-        if employee.get("employment_status") != "active":
-            violations.append("Employee is not in active employment status.")
-
-    if rules.get("require_available_balance") and employee and days is not None:
-        available = int(employee.get("leave_balances", {}).get(leave_type, 0))
-        if days > available:
-            violations.append(
-                f"Requested {days} day(s) exceeds available {leave_type} balance of {available}."
-            )
-
-    if not employee and leave_request.get("employee_id"):
-        violations.append("Policy cannot be fully evaluated without an employee record.")
-
-    policy_results = {
-        "policy_id": policy.get("policy_id"),
-        "title": policy.get("title"),
-        "leave_type": leave_type,
-        "rules": rules,
-        "violations": violations,
-        "warnings": warnings,
-        "requires_human_approval": requires_human_approval,
-        "eligible": len(violations) == 0,
-    }
-
-    summary = (
-        f"Applied {policy.get('policy_id')}: "
-        f"{len(violations)} violation(s), {len(warnings)} warning(s)."
+    policy_result, policy_patch = invoke_tool(
+        state,
+        agent="policy",
+        capability="policy.lookup",
+        payload={},
     )
-    return node_update("policy", summary, policy_results=policy_results)
+    validation_result, validation_patch = invoke_tool(
+        state,
+        agent="policy",
+        capability="policy.validate_leave",
+        payload={
+            "employee_id": leave_request.get("employee_id"),
+            "days": leave_request.get("days"),
+            "leave_type": leave_request.get("leave_type", "annual"),
+            "start_date": leave_request.get("start_date"),
+        },
+    )
+
+    if not policy_result.success:
+        errors.append(policy_result.error_message or "Leave policy lookup failed.")
+    if not validation_result.success:
+        errors.append(validation_result.error_message or "Leave policy validation failed.")
+        policy_results: dict[str, Any] = {
+            "policy_id": None,
+            "violations": errors,
+            "warnings": [],
+            "requires_human_approval": False,
+            "eligible": False,
+        }
+        summary = "Policy evaluation failed."
+    else:
+        policy_results = dict(validation_result.data or {})
+        if policy_result.success and policy_result.data:
+            policy_results.setdefault("policy_id", policy_result.data.get("policy_id"))
+            policy_results.setdefault("title", policy_result.data.get("title"))
+        summary = (
+            f"Applied {policy_results.get('policy_id')}: "
+            f"{len(policy_results.get('violations') or [])} violation(s), "
+            f"{len(policy_results.get('warnings') or [])} warning(s)."
+        )
+
+    return node_update(
+        "policy",
+        summary,
+        policy_results=policy_results,
+        errors=errors,
+        **merge_tool_patches(policy_patch, validation_patch),
+    )

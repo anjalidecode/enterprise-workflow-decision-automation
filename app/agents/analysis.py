@@ -1,4 +1,4 @@
-"""Analysis Agent: compare request, employee data, and policy findings."""
+"""Analysis Agent: interpret leave impact from tools and recommend an outcome."""
 
 from __future__ import annotations
 
@@ -6,33 +6,44 @@ from typing import Any
 
 from app.agents.common import leave_request_from_state, node_update
 from app.orchestration.state import WorkflowState
+from app.tools.executor import invoke_tool
 
 
 def analysis_agent(state: WorkflowState) -> dict[str, Any]:
     leave_request = leave_request_from_state(state)
-    employee = state.get("employee_data") or {}
     policy_results = state.get("policy_results") or {}
-    days = leave_request.get("days")
-    leave_type = leave_request.get("leave_type", "annual")
-    available = None
-    if employee:
-        available = employee.get("leave_balances", {}).get(leave_type)
+    errors: list[str] = []
+
+    impact_result, impact_patch = invoke_tool(
+        state,
+        agent="analysis",
+        capability="leave.impact",
+        payload={
+            "employee_id": leave_request.get("employee_id"),
+            "days": leave_request.get("days"),
+            "leave_type": leave_request.get("leave_type", "annual"),
+        },
+    )
 
     blockers: list[str] = list(policy_results.get("violations", []))
-    remaining_after = None
-    sufficient_balance = False
+    if not impact_result.success:
+        errors.append(impact_result.error_message or "Leave impact calculation failed.")
+        impact: dict[str, Any] = {}
+        blockers.append("Leave impact could not be calculated.")
+    else:
+        impact = dict(impact_result.data or {})
 
-    if isinstance(days, int) and isinstance(available, int):
-        sufficient_balance = days <= available
-        remaining_after = available - days
-        if not sufficient_balance and not any("balance" in item for item in blockers):
-            blockers.append("Insufficient leave balance.")
+    available = impact.get("available_days")
+    remaining_after = impact.get("remaining_after")
+    sufficient_balance = bool(impact.get("sufficient_balance"))
+    employment_active = bool(impact.get("employment_active"))
+    employee_found = bool(impact.get("employee_found"))
 
-    employment_active = employee.get("employment_status") == "active" if employee else False
-    if employee and not employment_active and not any("active" in item.lower() for item in blockers):
+    if employee_found and not sufficient_balance and not any("balance" in item for item in blockers):
+        blockers.append("Insufficient leave balance.")
+    if employee_found and not employment_active and not any("active" in item.lower() for item in blockers):
         blockers.append("Employee is not active.")
-
-    if not employee:
+    if not employee_found:
         blockers.append("No employee record available for analysis.")
 
     if policy_results.get("requires_human_approval"):
@@ -44,7 +55,7 @@ def analysis_agent(state: WorkflowState) -> dict[str, Any]:
 
     analysis_results = {
         "employee_id": leave_request.get("employee_id"),
-        "requested_days": days,
+        "requested_days": leave_request.get("days"),
         "available_days": available,
         "remaining_after": remaining_after,
         "sufficient_balance": sufficient_balance,
@@ -56,6 +67,12 @@ def analysis_agent(state: WorkflowState) -> dict[str, Any]:
 
     summary = (
         f"Analysis recommendation={recommendation}; "
-        f"balance={available}, requested={days}, blockers={len(blockers)}."
+        f"balance={available}, requested={leave_request.get('days')}, blockers={len(blockers)}."
     )
-    return node_update("analysis", summary, analysis_results=analysis_results)
+    return node_update(
+        "analysis",
+        summary,
+        analysis_results=analysis_results,
+        errors=errors,
+        **impact_patch,
+    )

@@ -6,6 +6,7 @@ from typing import Any
 
 from app.agents.common import node_update
 from app.orchestration.state import WorkflowState
+from app.tools.catalog import get_registry
 
 
 def validation_agent(state: WorkflowState) -> dict[str, Any]:
@@ -28,6 +29,14 @@ def validation_agent(state: WorkflowState) -> dict[str, Any]:
             issues.append("Approve decision conflicts with policy eligibility.")
         if not decision.get("executable"):
             issues.append("Approve decision is not marked executable.")
+        write_names = {tool.spec.name for tool in get_registry().find_write_tools()}
+        pending = state.get("pending_actions") or []
+        if not pending:
+            issues.append("Approve decision has no pending write actions.")
+        for action in pending:
+            action_type = action.get("type")
+            if action_type not in write_names:
+                issues.append(f"Pending action '{action_type}' is not a registered write tool.")
 
     if outcome == "pending_approval" and not state.get("requires_human_approval"):
         issues.append("Pending approval decision is missing the human-approval flag.")

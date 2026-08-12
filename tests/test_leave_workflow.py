@@ -1,7 +1,11 @@
+import json
+from pathlib import Path
+
 from langgraph.graph import END, START
 
 from app.orchestration.state import create_initial_state
-from app.services.hr_data import get_employee
+from app.services.hr_data import DATA_DIR, get_employee
+from app.services.hr_store import get_hr_store
 from app.workflows.leave_workflow import (
     AGENT_NODES,
     build_leave_graph,
@@ -17,6 +21,10 @@ UNKNOWN_EMPLOYEE_REQUEST = "Check whether employee E999 can take 3 days of leave
 
 def _agent_names(state: dict) -> list[str]:
     return [item["agent"] for item in state.get("agent_outputs", [])]
+
+
+def _tool_names(state: dict) -> list[str]:
+    return [item["tool_name"] for item in state.get("tool_executions", [])]
 
 
 def test_leave_workflow_graph_contains_specialized_nodes() -> None:
@@ -58,6 +66,7 @@ def test_multiple_agent_nodes_execute_and_update_state() -> None:
     assert result["analysis_results"]["recommendation"] == "approve"
     assert result["decision"]["outcome"] == "approve"
     assert result["final_response"]
+    assert "get_employee" in _tool_names(result)
 
 
 def test_valid_leave_request_produces_executable_decision_and_action() -> None:
@@ -70,10 +79,11 @@ def test_valid_leave_request_produces_executable_decision_and_action() -> None:
     assert result["confidence"] > 0
     assert "action" in names
     assert result["completed_actions"]
-    assert result["completed_actions"][0]["type"] == "simulate_leave_balance_update"
+    assert result["completed_actions"][0]["type"] == "update_leave_balance"
     assert result["completed_actions"][0]["previous_balance"] == 12
     assert result["completed_actions"][0]["new_balance"] == 9
     assert result["status"] == "completed"
+    assert get_hr_store().get_employee("E001")["leave_balances"]["annual"] == 9
 
     stored = get_employee("E001")
     assert stored is not None
@@ -91,6 +101,7 @@ def test_insufficient_leave_follows_response_path_without_action() -> None:
     assert result["completed_actions"] == []
     assert result["metadata"]["route"] == "response"
     assert "rejected" in result["final_response"].lower()
+    assert "update_leave_balance" not in _tool_names(result)
 
 
 def test_human_approval_request_skips_action() -> None:
@@ -101,6 +112,7 @@ def test_human_approval_request_skips_action() -> None:
     assert result["decision"]["executable"] is False
     assert "action" not in _agent_names(result)
     assert result["status"] == "awaiting_human_approval"
+    assert "update_leave_balance" not in _tool_names(result)
 
 
 def test_unknown_employee_does_not_approve() -> None:
@@ -110,6 +122,33 @@ def test_unknown_employee_does_not_approve() -> None:
     assert result["decision"]["outcome"] == "reject"
     assert "action" not in _agent_names(result)
     assert any("not found" in error.lower() for error in result["errors"])
+    not_found = [
+        trace
+        for trace in result["tool_executions"]
+        if trace.get("error_code") == "NOT_FOUND"
+    ]
+    assert not_found
+
+
+def test_tool_failure_does_not_fabricate_employee_or_approve() -> None:
+    store = get_hr_store()
+    store.inject_error("get_employee", times=100)
+    result = run_leave_workflow(VALID_REQUEST, reset_runtime=False)
+
+    assert result["employee_data"] == {}
+    assert result["decision"]["outcome"] != "approve"
+    assert "action" not in _agent_names(result)
+    assert any(trace.get("error_code") == "SERVICE_ERROR" for trace in result["tool_executions"])
+
+
+def test_successful_update_changes_memory_but_not_seed_json() -> None:
+    run_leave_workflow(VALID_REQUEST)
+    assert get_hr_store().get_employee("E001")["leave_balances"]["annual"] == 9
+
+    seed_path = Path(DATA_DIR) / "employees" / "employees.json"
+    payload = json.loads(seed_path.read_text(encoding="utf-8"))
+    e001 = next(item for item in payload if item["employee_id"] == "E001")
+    assert e001["leave_balances"]["annual"] == 12
 
 
 def test_workflow_is_not_a_single_chatbot_call() -> None:
@@ -123,3 +162,4 @@ def test_workflow_is_not_a_single_chatbot_call() -> None:
     assert result["policy_results"] != result["analysis_results"]
     assert result["decision"] != result["policy_results"]
     assert create_initial_state(VALID_REQUEST)["decision"] == {}
+    assert len(result["tool_executions"]) >= 2
