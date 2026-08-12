@@ -72,9 +72,10 @@ class ToolSelector:
                 )
 
         if tool.spec.side_effect == "write":
-            if agent != "action":
+            write_agents = {"action", "recruitment_action"}
+            if agent not in write_agents:
                 raise ToolForbiddenError(
-                    f"Write tool '{tool.spec.name}' can only be selected by the Action Agent."
+                    f"Write tool '{tool.spec.name}' can only be selected by an Action agent."
                 )
             if not validated:
                 raise ToolForbiddenError(

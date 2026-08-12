@@ -45,7 +45,10 @@ def test_registry_registration_and_lookup() -> None:
     assert registry.get("get_employee").spec.capability == "employee.lookup"
     assert registry.find_by_capability("leave.balance.update").spec.name == "update_leave_balance"
     write_names = {tool.spec.name for tool in registry.find_write_tools()}
-    assert write_names == {"update_leave_balance", "notify_employee"}
+    assert "update_leave_balance" in write_names
+    assert "notify_employee" in write_names
+    assert "shortlist_candidate" in write_names
+    assert "schedule_interview" in write_names
     research_tools = {tool.spec.name for tool in registry.list_for_agent("research")}
     assert research_tools == {"get_employee", "get_leave_balance"}
     assert {tool.spec.name for tool in registry.list_by_category("leave")} == {
@@ -53,23 +56,27 @@ def test_registry_registration_and_lookup() -> None:
         "update_leave_balance",
     }
     assert "employee" in registry.categories()
+    assert "recruitment" in registry.categories()
 
 
 def test_registry_unknown_tool_fails_closed() -> None:
     registry = build_registry()
     with pytest.raises(ToolNotFoundError, match="Unknown tool"):
-        registry.get("schedule_interview")
+        registry.get("totally_unknown_tool")
     with pytest.raises(ToolNotFoundError, match="Unknown capability"):
         registry.find_by_capability("calendar.schedule")
 
 
 def test_planned_domains_are_documented_not_registered() -> None:
     registry = build_registry()
-    planned = planned_capabilities_for_category("recruitment")
-    assert planned
+    # Recruitment tools are implemented; other planned domains remain documentation-only.
+    planned_onboarding = planned_capabilities_for_category("onboarding")
+    assert planned_onboarding
     assert any(item["name"] == "search_candidates" for item in PLANNED_TOOL_CAPABILITIES)
-    for item in planned:
+    for item in planned_onboarding:
         assert not registry.has(item["name"])
+    assert registry.has("search_candidates")
+    assert registry.has("calculate_candidate_score")
 
 
 def test_selector_allows_read_tool_for_research() -> None:

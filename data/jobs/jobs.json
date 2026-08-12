@@ -1,0 +1,30 @@
+[
+  {
+    "job_id": "J001",
+    "organization_id": "",
+    "title": "Python Backend Developer",
+    "department": "Engineering",
+    "required_skills": ["Python", "FastAPI", "SQL"],
+    "preferred_skills": ["Docker", "AWS", "PostgreSQL"],
+    "minimum_experience": 3,
+    "education": "Bachelor",
+    "location": "Remote",
+    "employment_type": "full_time",
+    "status": "open",
+    "salary_range": {"currency": "USD", "min": 90000, "max": 130000}
+  },
+  {
+    "job_id": "J002",
+    "organization_id": "",
+    "title": "Frontend Developer",
+    "department": "Engineering",
+    "required_skills": ["React", "TypeScript", "CSS"],
+    "preferred_skills": ["Next.js", "GraphQL"],
+    "minimum_experience": 2,
+    "education": "Bachelor",
+    "location": "New York",
+    "employment_type": "full_time",
+    "status": "open",
+    "salary_range": {"currency": "USD", "min": 85000, "max": 120000}
+  }
+]

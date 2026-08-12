@@ -1,7 +1,7 @@
-"""Explicit registration of leave-workflow tools.
+"""Explicit registration of workflow tools.
 
-Future domain tools (recruitment, onboarding, etc.) register the same way via
-ToolRegistry without changing ToolExecutor. See app/tools/domains.py.
+Future domain tools register the same way via ToolRegistry without changing
+ToolExecutor.
 """
 
 from __future__ import annotations
@@ -10,13 +10,25 @@ from app.tools.implementations.employee import GetEmployeeTool, GetLeaveBalanceT
 from app.tools.implementations.leave import CalculateLeaveImpactTool, UpdateLeaveBalanceTool
 from app.tools.implementations.notification import NotifyEmployeeTool
 from app.tools.implementations.policy import GetLeavePolicyTool, ValidateLeavePolicyTool
+from app.tools.implementations.recruitment import (
+    CalculateCandidateScoreTool,
+    GetCandidateTool,
+    GetJobTool,
+    NotifyCandidateTool,
+    NotifyRecruiterTool,
+    ScheduleInterviewTool,
+    SearchCandidatesTool,
+    SearchJobsTool,
+    ShortlistCandidateTool,
+    ValidateRecruitmentPolicyTool,
+)
 from app.tools.registry import ToolRegistry
 
 _REGISTRY: ToolRegistry | None = None
 
 
 def build_registry() -> ToolRegistry:
-    """Create a new registry with the seven leave-workflow tools."""
+    """Create a registry with leave and recruitment tools."""
 
     registry = ToolRegistry()
     registry.register(GetEmployeeTool())
@@ -26,6 +38,16 @@ def build_registry() -> ToolRegistry:
     registry.register(CalculateLeaveImpactTool())
     registry.register(UpdateLeaveBalanceTool())
     registry.register(NotifyEmployeeTool())
+    registry.register(GetJobTool())
+    registry.register(SearchJobsTool())
+    registry.register(SearchCandidatesTool())
+    registry.register(GetCandidateTool())
+    registry.register(CalculateCandidateScoreTool())
+    registry.register(ValidateRecruitmentPolicyTool())
+    registry.register(ShortlistCandidateTool())
+    registry.register(ScheduleInterviewTool())
+    registry.register(NotifyCandidateTool())
+    registry.register(NotifyRecruiterTool())
     return registry
 
 

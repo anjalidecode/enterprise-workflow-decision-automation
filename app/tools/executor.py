@@ -36,6 +36,11 @@ SAFE_INPUT_KEYS = (
     "workflow_id",
     "organization_id",
     "policy_id",
+    "job_id",
+    "candidate_id",
+    "recipient_id",
+    "score",
+    "slot",
 )
 
 

@@ -50,6 +50,27 @@ AGENT_MEMORY_PERMISSIONS: dict[str, dict[MemoryLayer, set[str]]] = {
         "knowledge": {"read"},
         "long_term": {"write"},
     },
+    # Recruitment-specialized agents
+    "recruitment_planner": {"short_term": {"write"}},
+    "job_research": {"short_term": {"write"}},
+    "candidate_research": {"short_term": {"write"}},
+    "candidate_analysis": {
+        "short_term": {"write"},
+        "knowledge": {"read"},
+    },
+    "candidate_scoring": {"short_term": {"write"}},
+    "recruitment_policy": {"short_term": {"write"}, "knowledge": {"read"}},
+    "recruitment_decision": {
+        "short_term": {"read", "write"},
+        "long_term": {"read"},
+    },
+    "recruitment_validation": {"short_term": {"read"}},
+    "recruitment_action": {"short_term": {"write"}},
+    "recruitment_response": {
+        "short_term": {"read"},
+        "knowledge": {"read"},
+        "long_term": {"write"},
+    },
 }
 
 # Extension points for future role-aware retrieval. Not enforced as full RBAC yet.

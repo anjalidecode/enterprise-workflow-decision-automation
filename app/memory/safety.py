@@ -15,6 +15,9 @@ ALLOWED_LONG_TERM_FIELDS = frozenset(
         "organization_id",
         "user_id",
         "employee_id",
+        "job_id",
+        "candidate_id",
+        "shortlisted_count",
         "workflow_type",
         "outcome",
         "days",
@@ -68,9 +71,18 @@ def sanitize_long_term_payload(payload: dict[str, Any]) -> dict[str, Any]:
             cleaned[key] = str(value)[:400]
         elif key == "days":
             cleaned[key] = int(value)
+        elif key == "shortlisted_count":
+            cleaned[key] = int(value)
         elif key == "requires_human_approval":
             cleaned[key] = bool(value)
-        elif key in {"organization_id", "user_id", "employee_id", "workflow_id"}:
+        elif key in {
+            "organization_id",
+            "user_id",
+            "employee_id",
+            "workflow_id",
+            "job_id",
+            "candidate_id",
+        }:
             cleaned[key] = str(value)
         else:
             cleaned[key] = value

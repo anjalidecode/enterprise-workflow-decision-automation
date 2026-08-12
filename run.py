@@ -127,11 +127,31 @@ def main() -> None:
     retrieved = result.get("retrieved_data") or {}
     policy = result.get("policy_results") or {}
     analysis = result.get("analysis_results") or {}
-    print(f"  Employee:          {employee.get('name', 'n/a')} ({employee.get('employee_id', 'n/a')})")
-    print(f"  Employment status: {employee.get('employment_status', retrieved.get('employment_status', 'n/a'))}")
-    print(f"  Policy:            {policy.get('policy_id', 'n/a')} eligible={policy.get('eligible')}")
-    print(f"  Policy violations: {policy.get('violations') or []}")
-    print(f"  Analysis:          {analysis.get('recommendation')} remaining_after={analysis.get('remaining_after')}")
+    if result.get("workflow_type") == "recruitment":
+        job = retrieved.get("job") or {}
+        print(f"  Job:               {job.get('title', 'n/a')} ({job.get('job_id', 'n/a')})")
+        print(f"  Candidates found:  {retrieved.get('candidate_count', 0)}")
+        print(f"  Shortlist:         {analysis.get('shortlist_candidates') or []}")
+        print(f"  Review:            {analysis.get('review_candidates') or []}")
+        print(f"  Rejected:          {analysis.get('rejected_candidates') or []}")
+        scores = analysis.get("candidate_scores") or []
+        if scores:
+            top = ", ".join(
+                f"{item.get('candidate_id')}={item.get('score')}" for item in scores[:5]
+            )
+            print(f"  Top scores:        {top}")
+    else:
+        print(f"  Employee:          {employee.get('name', 'n/a')} ({employee.get('employee_id', 'n/a')})")
+        print(
+            f"  Employment status: "
+            f"{employee.get('employment_status', retrieved.get('employment_status', 'n/a'))}"
+        )
+        print(f"  Policy:            {policy.get('policy_id', 'n/a')} eligible={policy.get('eligible')}")
+        print(f"  Policy violations: {policy.get('violations') or []}")
+        print(
+            f"  Analysis:          {analysis.get('recommendation')} "
+            f"remaining_after={analysis.get('remaining_after')}"
+        )
     print(f"  Planned tasks:     {result.get('tasks')}")
     print(f"  Completed tasks:   {result.get('completed_tasks')}")
 

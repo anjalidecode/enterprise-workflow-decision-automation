@@ -1,0 +1,24 @@
+{
+  "policy_id": "HR-RECRUIT-001",
+  "name": "Recruitment Shortlist Policy",
+  "version": "1.0",
+  "weights": {
+    "required_skills": 0.4,
+    "experience": 0.25,
+    "education": 0.1,
+    "location": 0.1,
+    "preferred_skills": 0.15
+  },
+  "thresholds": {
+    "shortlist_min_score": 75,
+    "review_min_score": 55
+  },
+  "rules": {
+    "job_must_be_open": true,
+    "candidate_must_be_active": true,
+    "require_all_required_skills_for_shortlist": true,
+    "human_approval_before_shortlist": true,
+    "interview_requires_shortlist_approval": true,
+    "max_shortlist_size": 3
+  }
+}

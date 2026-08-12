@@ -25,7 +25,10 @@ def test_leave_query_returns_relevant_hit_without_api_key() -> None:
 def test_knowledge_filters() -> None:
     store = KnowledgeStore()
     leave_hits = store.search("leave process", workflow_type="leave_attendance", doc_type="handbook")
-    other_hits = store.search("leave process", workflow_type="recruitment")
+    other_hits = store.search(
+        "annual leave balance vacation days",
+        workflow_type="recruitment",
+    )
     assert leave_hits
     assert other_hits == []
 

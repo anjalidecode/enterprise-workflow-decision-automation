@@ -10,7 +10,9 @@ HR Operations workflow automation and decision-support platform. Specialized age
 
 **Module 3 — Agent Coordination & Memory Management** adds short-term, knowledge, and long-term memory beside LangGraph. `WorkflowState` remains the live coordination contract. Memory may explain, warn, or adjust confidence; structured tools and `validate_leave_policy` remain authoritative.
 
-**Module 4A — Workflow Platform Spine** adds `WorkflowSpec`, `WorkflowRegistry`, deterministic `WorkflowRouter`, and `WorkflowEngine` returning `WorkflowResult` (state + audit snapshot + metrics). `run.py` is a thin engine client. Only Leave & Attendance is registered; other HR workflows come in later phases.
+**Module 4A — Workflow Platform Spine** adds `WorkflowSpec`, `WorkflowRegistry`, deterministic `WorkflowRouter`, and `WorkflowEngine` returning `WorkflowResult` (state + audit snapshot + metrics). `run.py` is a thin engine client.
+
+**Module 4B/C — Recruitment Workflow** registers `recruitment` on the same engine with specialized recruitment agents, recruitment tools, simulated jobs/candidates data, policy validation, human approval before shortlist/interview, and full audit/metrics tracing.
 
 ## Architecture
 

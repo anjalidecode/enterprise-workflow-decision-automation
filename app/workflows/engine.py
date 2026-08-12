@@ -8,6 +8,8 @@ from typing import Any
 
 from app.agents.action import action_agent
 from app.agents.response import response_agent
+from app.agents.recruitment.action import recruitment_action_agent
+from app.agents.recruitment.response import recruitment_response_agent
 from app.memory.facade import reset_short_term_memory
 from app.orchestration.state import WorkflowState, create_initial_state
 from app.workflows.contracts import (
@@ -30,7 +32,14 @@ def _apply_node_patch(state: WorkflowState, patch: dict[str, Any]) -> WorkflowSt
 
     merged: dict[str, Any] = dict(state)
     for key, value in patch.items():
-        if key in {"completed_tasks", "completed_actions", "errors", "agent_outputs", "tool_executions", "memory_accesses"}:
+        if key in {
+            "completed_tasks",
+            "completed_actions",
+            "errors",
+            "agent_outputs",
+            "tool_executions",
+            "memory_accesses",
+        }:
             existing = list(merged.get(key) or [])
             if isinstance(value, list):
                 existing.extend(value)
@@ -40,6 +49,88 @@ def _apply_node_patch(state: WorkflowState, patch: dict[str, Any]) -> WorkflowSt
         else:
             merged[key] = value
     return merged  # type: ignore[return-value]
+
+
+def _pending_actions_after_approval(working: WorkflowState, decision: dict[str, Any]) -> list[dict[str, Any]]:
+    """Build executable write actions after human approval, by workflow type."""
+
+    metadata = working.get("metadata") or {}
+    workflow_type = str(working.get("workflow_type") or "")
+
+    if workflow_type == "recruitment":
+        job_id = (metadata.get("recruitment_request") or {}).get("job_id") or (
+            working.get("entities") or {}
+        ).get("job_id")
+        shortlist = list(
+            metadata.get("shortlist_candidates")
+            or (decision.get("entity_refs") or {}).get("shortlist")
+            or (working.get("analysis_results") or {}).get("shortlist_candidates")
+            or []
+        )
+        scores = {
+            str(item.get("candidate_id")): item
+            for item in (working.get("analysis_results") or {}).get("candidate_scores") or []
+        }
+        actions: list[dict[str, Any]] = []
+        for candidate_id in shortlist:
+            score = (scores.get(str(candidate_id)) or {}).get("score")
+            actions.append(
+                {
+                    "type": "shortlist_candidate",
+                    "job_id": job_id,
+                    "candidate_id": candidate_id,
+                    "score": score,
+                }
+            )
+            actions.append(
+                {
+                    "type": "schedule_interview",
+                    "job_id": job_id,
+                    "candidate_id": candidate_id,
+                }
+            )
+            actions.append(
+                {
+                    "type": "notify_candidate",
+                    "recipient_id": candidate_id,
+                    "message": f"You have been shortlisted for job {job_id}. Interview scheduling in progress.",
+                }
+            )
+        if shortlist:
+            actions.append(
+                {
+                    "type": "notify_recruiter",
+                    "recipient_id": "RECRUITER-001",
+                    "message": (
+                        f"Shortlist approved for job {job_id}: {', '.join(str(item) for item in shortlist)}."
+                    ),
+                }
+            )
+        return actions
+
+    # Default: leave-compatible write actions
+    leave_request = dict(metadata.get("leave_request") or {})
+    employee_id = (
+        leave_request.get("employee_id")
+        or decision.get("employee_id")
+        or (working.get("entities") or {}).get("employee_id")
+    )
+    days = leave_request.get("days") or decision.get("requested_days")
+    leave_type = leave_request.get("leave_type") or decision.get("leave_type") or "annual"
+    return [
+        {
+            "type": "update_leave_balance",
+            "employee_id": employee_id,
+            "days": days,
+            "leave_type": leave_type,
+            "start_date": leave_request.get("start_date"),
+        },
+        {
+            "type": "notify_employee",
+            "employee_id": employee_id,
+            "message": "Leave request approved after human review.",
+        },
+    ]
 
 
 def _unsupported_state(
@@ -276,36 +367,18 @@ class WorkflowEngine:
         validation["passed"] = True
         metadata["validation"] = validation
 
-        leave_request = dict(metadata.get("leave_request") or {})
-        employee_id = (
-            leave_request.get("employee_id")
-            or decision.get("employee_id")
-            or (working.get("entities") or {}).get("employee_id")
-        )
-        days = leave_request.get("days") or decision.get("requested_days")
-        leave_type = leave_request.get("leave_type") or decision.get("leave_type") or "annual"
-        # Replace the approval placeholder with the authoritative write actions.
-        working["pending_actions"] = [
-            {
-                "type": "update_leave_balance",
-                "employee_id": employee_id,
-                "days": days,
-                "leave_type": leave_type,
-                "start_date": leave_request.get("start_date"),
-            },
-            {
-                "type": "notify_employee",
-                "employee_id": employee_id,
-                "message": "Leave request approved after human review.",
-            },
-        ]
+        working["pending_actions"] = _pending_actions_after_approval(working, decision)
         working["decision"] = decision
         working["requires_human_approval"] = False
         working["metadata"] = metadata
         working["status"] = "in_progress"
 
-        working = _apply_node_patch(working, action_agent(working))
-        working = _apply_node_patch(working, response_agent(working))
+        if str(working.get("workflow_type") or "") == "recruitment":
+            working = _apply_node_patch(working, recruitment_action_agent(working))
+            working = _apply_node_patch(working, recruitment_response_agent(working))
+        else:
+            working = _apply_node_patch(working, action_agent(working))
+            working = _apply_node_patch(working, response_agent(working))
         self._checkpoints.pop(workflow_id, None)
 
         completed_at = _utc_now()

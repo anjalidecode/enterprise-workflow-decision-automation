@@ -1,0 +1,67 @@
+[
+  {
+    "candidate_id": "C001",
+    "organization_id": "",
+    "name": "Sam Okonkwo",
+    "skills": ["Python", "FastAPI", "SQL", "Docker", "PostgreSQL", "AWS"],
+    "experience_years": 5,
+    "education": "Bachelor",
+    "location": "Remote",
+    "preferred_location": "Remote",
+    "previous_roles": ["Backend Engineer", "API Developer"],
+    "availability": "immediate",
+    "application_status": "active"
+  },
+  {
+    "candidate_id": "C002",
+    "organization_id": "",
+    "name": "Riley Nguyen",
+    "skills": ["Python", "Django", "JavaScript"],
+    "experience_years": 2,
+    "education": "Bachelor",
+    "location": "Remote",
+    "preferred_location": "Remote",
+    "previous_roles": ["Junior Backend Developer"],
+    "availability": "2_weeks",
+    "application_status": "active"
+  },
+  {
+    "candidate_id": "C003",
+    "organization_id": "",
+    "name": "Jordan Blake",
+    "skills": ["Marketing", "SEO", "Copywriting"],
+    "experience_years": 4,
+    "education": "Bachelor",
+    "location": "Chicago",
+    "preferred_location": "Chicago",
+    "previous_roles": ["Content Marketer"],
+    "availability": "immediate",
+    "application_status": "active"
+  },
+  {
+    "candidate_id": "C004",
+    "organization_id": "",
+    "name": "Avery Patel",
+    "skills": ["Java", "Spring", "SQL", "Docker", "AWS"],
+    "experience_years": 8,
+    "education": "Master",
+    "location": "Remote",
+    "preferred_location": "Remote",
+    "previous_roles": ["Senior Java Engineer", "Tech Lead"],
+    "availability": "1_month",
+    "application_status": "active"
+  },
+  {
+    "candidate_id": "C005",
+    "organization_id": "",
+    "name": "Morgan Ellis",
+    "skills": ["Python", "FastAPI", "SQL", "Redis"],
+    "experience_years": 4,
+    "education": "Bachelor",
+    "location": "Austin",
+    "preferred_location": "Remote",
+    "previous_roles": ["Backend Developer"],
+    "availability": "immediate",
+    "application_status": "active"
+  }
+]
