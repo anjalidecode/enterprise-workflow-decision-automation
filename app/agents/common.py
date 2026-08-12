@@ -31,6 +31,22 @@ def leave_request_from_state(state: WorkflowState) -> dict[str, Any]:
     return dict(state.get("metadata", {}).get("leave_request", {}))
 
 
+def entities_from_state(state: WorkflowState) -> dict[str, Any]:
+    """Return the reusable entity context bag for the current workflow."""
+
+    return dict(state.get("entities") or {})
+
+
+def merge_entities(state: WorkflowState, **updates: Any) -> dict[str, Any]:
+    """Return entities updated with the provided keys (empty values are skipped)."""
+
+    merged = entities_from_state(state)
+    for key, value in updates.items():
+        if value is not None and value != "":
+            merged[key] = value
+    return merged
+
+
 def combine_patches(*patches: dict[str, Any]) -> dict[str, Any]:
     """Merge tool and memory patches from multiple calls in one node."""
 

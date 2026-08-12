@@ -23,6 +23,7 @@ from app.tools.registry import ToolRegistry
 from app.tools.results import ToolExecutionRecord, ToolResult
 from app.tools.selector import ToolSelector
 
+
 def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -33,6 +34,7 @@ SAFE_INPUT_KEYS = (
     "leave_type",
     "start_date",
     "workflow_id",
+    "organization_id",
     "policy_id",
 )
 
@@ -41,16 +43,28 @@ def _input_summary(payload: dict[str, Any]) -> dict[str, Any]:
     return {key: payload[key] for key in SAFE_INPUT_KEYS if key in payload}
 
 
+def _context_from_state(state: WorkflowState, *, agent: str, validated: bool) -> ToolContext:
+    return ToolContext(
+        workflow_id=state.get("workflow_id", ""),
+        agent=agent,
+        workflow_type=state.get("workflow_type", ""),
+        organization_id=state.get("organization_id", "") or "",
+        user_id=state.get("user_id", "") or state.get("initiated_by", "") or "",
+        user_role=state.get("user_role", "") or "",
+        validated=validated,
+    )
+
+
 def _trace(
     *,
     tool: BaseTool | None,
-    agent: str,
+    context: ToolContext,
     result: ToolResult,
     payload: dict[str, Any],
 ) -> dict[str, Any]:
     record = ToolExecutionRecord(
         tool_name=result.tool_name,
-        agent=agent,
+        agent=context.agent,
         capability=tool.spec.capability if tool is not None else "",
         success=result.success,
         attempts=result.attempts,
@@ -58,6 +72,9 @@ def _trace(
         error_code=result.error_code,
         input_summary=_input_summary(payload),
         timestamp=_utc_now(),
+        workflow_id=context.workflow_id,
+        organization_id=context.organization_id,
+        user_id=context.user_id,
     )
     return record.model_dump()
 
@@ -103,12 +120,7 @@ class ToolExecutor:
         if validated is None:
             validated = bool((state.get("metadata") or {}).get("validation", {}).get("passed"))
 
-        context = ToolContext(
-            workflow_id=state.get("workflow_id", ""),
-            agent=agent,
-            workflow_type=state.get("workflow_type", ""),
-            validated=validated,
-        )
+        context = _context_from_state(state, agent=agent, validated=validated)
         started = time.perf_counter()
         tool: BaseTool | None = None
         try:
@@ -117,6 +129,7 @@ class ToolExecutor:
                 capability=capability,
                 name=name,
                 validated=validated,
+                context=context,
             )
             result = self._execute(tool, payload, context, started)
         except (ToolForbiddenError, ToolSelectionError) as error:
@@ -144,7 +157,11 @@ class ToolExecutor:
                 duration_ms=duration_ms,
             )
 
-        patch = {"tool_executions": [_trace(tool=tool, agent=agent, result=result, payload=payload)]}
+        patch = {
+            "tool_executions": [
+                _trace(tool=tool, context=context, result=result, payload=payload)
+            ]
+        }
         return result, patch
 
     def _execute(
@@ -178,7 +195,11 @@ class ToolExecutor:
                 data=data,
                 attempts=attempts,
                 duration_ms=duration_ms,
-                source=(data or {}).get("source", "simulated_hr_store") if isinstance(data, dict) else "simulated_hr_store",
+                source=(
+                    (data or {}).get("source", "simulated_hr_store")
+                    if isinstance(data, dict)
+                    else "simulated_hr_store"
+                ),
             )
         except ToolNotFoundError as error:
             duration_ms = (time.perf_counter() - started) * 1000
@@ -198,8 +219,8 @@ class ToolExecutor:
             )
         except ToolServiceError as error:
             duration_ms = (time.perf_counter() - started) * 1000
-            if tool.spec.capability == "notification.send":
-                return self._notification_fallback(tool, inputs, attempts, duration_ms)
+            if tool.spec.capability.startswith("notification."):
+                return self._notification_fallback(tool, inputs, context, attempts, duration_ms)
             return ToolResult(
                 tool_name=tool.spec.name,
                 success=False,
@@ -215,6 +236,7 @@ class ToolExecutor:
         self,
         tool: BaseTool,
         inputs: Any,
+        context: ToolContext,
         attempts: int,
         duration_ms: float,
     ) -> ToolResult:
@@ -224,7 +246,8 @@ class ToolExecutor:
         record = get_notification_service().log_fallback(
             employee_id=str(payload.get("employee_id", "")),
             message=str(payload.get("message", "")),
-            workflow_id=str(payload.get("workflow_id", "")),
+            workflow_id=str(payload.get("workflow_id") or context.workflow_id),
+            organization_id=context.organization_id,
         )
         return ToolResult(
             tool_name=tool.spec.name,

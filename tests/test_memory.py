@@ -156,9 +156,93 @@ def test_memory_permissions() -> None:
 
 def test_memory_access_trace_on_read_and_write() -> None:
     state = _state()
+    state["organization_id"] = "org-demo"
+    state["user_id"] = "u-1"
     _record, write_patch = append_short_term(state, agent="planner", content="Planner parsed request.")
     _records, read_patch = search_short_term(state, agent="analysis")
-    assert write_patch["memory_accesses"][0]["operation"] == "write"
-    assert write_patch["memory_accesses"][0]["layer"] == "short_term"
+    access = write_patch["memory_accesses"][0]
+    assert access["operation"] == "write"
+    assert access["layer"] == "short_term"
+    assert access["organization_id"] == "org-demo"
+    assert access["workflow_id"] == state["workflow_id"]
+    assert access["user_id"] == "u-1"
+    assert access["timestamp"]
     assert read_patch["memory_accesses"][0]["operation"] == "read"
     assert "google_api_key" not in str(write_patch)
+
+
+def test_long_term_organization_isolation_same_employee_id() -> None:
+    org_a = _state()
+    org_a["organization_id"] = "org-a"
+    org_b = _state()
+    org_b["organization_id"] = "org-b"
+
+    write_long_term(
+        org_a,
+        agent="response",
+        payload={
+            "employee_id": "E001",
+            "workflow_type": "leave_attendance",
+            "outcome": "approved",
+            "days": 3,
+            "rationale_summary": "Org A leave history.",
+        },
+    )
+    write_long_term(
+        org_b,
+        agent="response",
+        payload={
+            "employee_id": "E001",
+            "workflow_type": "leave_attendance",
+            "outcome": "rejected",
+            "days": 2,
+            "rationale_summary": "Org B leave history.",
+        },
+    )
+
+    a_records, _ = recall_long_term(org_a, agent="research", employee_id="E001")
+    b_records, _ = recall_long_term(org_b, agent="research", employee_id="E001")
+    assert len(a_records) == 1
+    assert len(b_records) == 1
+    assert a_records[0].organization_id == "org-a"
+    assert b_records[0].organization_id == "org-b"
+    assert "Org A" in a_records[0].content
+    assert "Org B" in b_records[0].content
+
+
+def test_short_term_organization_isolation() -> None:
+    org_a = _state()
+    org_a["organization_id"] = "org-a"
+    org_b = create_initial_state(org_a["user_request"])
+    org_b["workflow_id"] = org_a["workflow_id"]
+    org_b["workflow_type"] = "leave_attendance"
+    org_b["organization_id"] = "org-b"
+
+    append_short_term(org_a, agent="planner", content="Org A notebook note.")
+    a_records, _ = search_short_term(org_a, agent="analysis")
+    b_records, _ = search_short_term(org_b, agent="analysis")
+    assert len(a_records) == 1
+    assert b_records == []
+
+
+def test_employee_role_scope_extension_point() -> None:
+    state = _state()
+    state["organization_id"] = "org-a"
+    state["user_role"] = "employee"
+    state["metadata"] = {"leave_request": {"employee_id": "E001"}}
+    write_long_term(
+        state,
+        agent="response",
+        payload={
+            "employee_id": "E001",
+            "workflow_type": "leave_attendance",
+            "outcome": "approved",
+            "days": 1,
+            "rationale_summary": "own record",
+        },
+    )
+    own, _ = recall_long_term(state, agent="research", employee_id="E001")
+    other, patch = recall_long_term(state, agent="research", employee_id="E002")
+    assert len(own) == 1
+    assert other == []
+    assert "role scope" in patch["memory_accesses"][0]["summary"].lower()

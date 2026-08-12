@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from app.tools.contracts import BaseTool
+from app.tools.contracts import BaseTool, ToolCategory
 from app.tools.errors import ToolNotFoundError
 
 
@@ -35,6 +35,9 @@ class ToolRegistry:
     def list_for_agent(self, agent: str) -> list[BaseTool]:
         return [tool for tool in self._by_name.values() if agent in tool.spec.allowed_agents]
 
+    def list_by_category(self, category: ToolCategory | str) -> list[BaseTool]:
+        return [tool for tool in self._by_name.values() if tool.spec.category == category]
+
     def find_by_capability(self, capability: str) -> BaseTool:
         tool = self._by_capability.get(capability)
         if tool is None:
@@ -46,3 +49,6 @@ class ToolRegistry:
 
     def all_tools(self) -> list[BaseTool]:
         return list(self._by_name.values())
+
+    def categories(self) -> list[str]:
+        return sorted({tool.spec.category for tool in self._by_name.values()})

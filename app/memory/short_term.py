@@ -1,4 +1,8 @@
-"""Workflow-scoped in-process short-term memory. Not persisted."""
+"""Workflow-scoped in-process short-term memory. Not persisted.
+
+Scoped by organization_id + workflow_id so multi-tenant runs never share a notebook.
+Empty organization_id preserves the current single-tenant development behavior.
+"""
 
 from __future__ import annotations
 
@@ -13,8 +17,12 @@ def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _scope_key(organization_id: str, workflow_id: str) -> str:
+    return f"{organization_id or '_'}::{workflow_id}"
+
+
 class ShortTermMemory:
-    """Notebook for a single workflow run, keyed by workflow_id."""
+    """Notebook for a single workflow run, keyed by organization + workflow."""
 
     def __init__(self) -> None:
         self._records: dict[str, list[MemoryRecord]] = defaultdict(list)
@@ -29,6 +37,8 @@ class ShortTermMemory:
         content: str,
         kind: MemoryKind = "observation",
         agent: str | None = None,
+        organization_id: str = "",
+        user_id: str | None = None,
         employee_id: str | None = None,
         workflow_type: str | None = None,
         metadata: dict | None = None,
@@ -38,17 +48,24 @@ class ShortTermMemory:
             layer="short_term",
             kind=kind,
             workflow_id=workflow_id,
+            organization_id=organization_id or "",
+            user_id=user_id,
             employee_id=employee_id,
             workflow_type=workflow_type,
             content=content,
             metadata={"agent": agent, **(metadata or {})},
             timestamp=_utc_now(),
         )
-        self._records[workflow_id].append(record)
+        self._records[_scope_key(organization_id, workflow_id)].append(record)
         return record
 
-    def list_for_workflow(self, workflow_id: str) -> list[MemoryRecord]:
-        return list(self._records.get(workflow_id, []))
+    def list_for_workflow(
+        self,
+        workflow_id: str,
+        *,
+        organization_id: str = "",
+    ) -> list[MemoryRecord]:
+        return list(self._records.get(_scope_key(organization_id, workflow_id), []))
 
 
 _STORE: ShortTermMemory | None = None

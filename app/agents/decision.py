@@ -46,7 +46,10 @@ def decision_agent(state: WorkflowState) -> dict[str, Any]:
             executable=True,
             employee_id=leave_request.get("employee_id"),
             requested_days=leave_request.get("days"),
+            leave_type=leave_request.get("leave_type", "annual"),
             confidence=confidence,
+            requires_human_approval=False,
+            entity_refs={"employee_id": leave_request.get("employee_id")},
         )
         pending_actions = [
             {
@@ -73,7 +76,10 @@ def decision_agent(state: WorkflowState) -> dict[str, Any]:
             executable=False,
             employee_id=leave_request.get("employee_id"),
             requested_days=leave_request.get("days"),
+            leave_type=leave_request.get("leave_type", "annual"),
             confidence=0.78,
+            requires_human_approval=True,
+            entity_refs={"employee_id": leave_request.get("employee_id")},
         )
         pending_actions = [
             {
@@ -91,7 +97,10 @@ def decision_agent(state: WorkflowState) -> dict[str, Any]:
             executable=False,
             employee_id=leave_request.get("employee_id"),
             requested_days=leave_request.get("days"),
+            leave_type=leave_request.get("leave_type", "annual"),
             confidence=0.95,
+            requires_human_approval=False,
+            entity_refs={"employee_id": leave_request.get("employee_id")},
         )
         pending_actions = []
         requires_human_approval = False

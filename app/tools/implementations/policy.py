@@ -118,7 +118,7 @@ class GetLeavePolicyTool(BaseTool):
 
     def execute(self, inputs: BaseModel, context: ToolContext) -> dict[str, Any]:
         try:
-            policy = get_hr_store().get_leave_policy()
+            policy = get_hr_store().get_leave_policy(organization_id=context.organization_id)
         except SimulatedServiceError as error:
             raise from_service_error(error) from error
         output = GetLeavePolicyOutput(
@@ -149,8 +149,15 @@ class ValidateLeavePolicyTool(BaseTool):
         payload = ValidateLeavePolicyInput.model_validate(inputs.model_dump())
         store = get_hr_store()
         try:
-            policy = store.get_leave_policy()
-            employee = store.get_employee(payload.employee_id) if payload.employee_id else None
+            policy = store.get_leave_policy(organization_id=context.organization_id)
+            employee = (
+                store.get_employee(
+                    payload.employee_id,
+                    organization_id=context.organization_id,
+                )
+                if payload.employee_id
+                else None
+            )
         except SimulatedServiceError as error:
             raise from_service_error(error) from error
         result = evaluate_leave_policy(

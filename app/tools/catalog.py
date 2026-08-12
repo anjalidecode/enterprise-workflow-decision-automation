@@ -1,4 +1,8 @@
-"""Explicit registration of Module 2 leave-workflow tools."""
+"""Explicit registration of leave-workflow tools.
+
+Future domain tools (recruitment, onboarding, etc.) register the same way via
+ToolRegistry without changing ToolExecutor. See app/tools/domains.py.
+"""
 
 from __future__ import annotations
 

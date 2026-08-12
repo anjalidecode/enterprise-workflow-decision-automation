@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from pydantic import BaseModel
 
-from pydantic import BaseModel, Field
+from app.models.decision import WorkflowDecision
 
 
 class LeaveRequest(BaseModel):
@@ -16,13 +16,9 @@ class LeaveRequest(BaseModel):
     leave_type: str = "annual"
 
 
-class LeaveDecision(BaseModel):
-    """Structured decision produced by the Decision Agent."""
+class LeaveDecision(WorkflowDecision):
+    """Leave-specific decision. Extends the reusable WorkflowDecision contract."""
 
-    outcome: Literal["approve", "reject", "pending_approval"]
-    rationale: str
-    executable: bool
     employee_id: str | None = None
     requested_days: int | None = None
     leave_type: str = "annual"
-    confidence: float = Field(ge=0.0, le=1.0)

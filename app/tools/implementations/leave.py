@@ -44,6 +44,7 @@ class UpdateLeaveBalanceOutput(BaseModel):
     previous_balance: int
     new_balance: int
     idempotent_replay: bool = False
+    organization_id: str = ""
     source: str = "simulated_hr_store"
 
 
@@ -64,7 +65,12 @@ class CalculateLeaveImpactTool(BaseTool):
         payload = CalculateLeaveImpactInput.model_validate(inputs.model_dump())
         try:
             employee = (
-                get_hr_store().get_employee(payload.employee_id) if payload.employee_id else None
+                get_hr_store().get_employee(
+                    payload.employee_id,
+                    organization_id=context.organization_id,
+                )
+                if payload.employee_id
+                else None
             )
         except SimulatedServiceError as error:
             raise from_service_error(error) from error
@@ -98,6 +104,7 @@ class UpdateLeaveBalanceTool(BaseTool):
         capability="leave.balance.update",
         side_effect="write",
         allowed_agents=["action"],
+        idempotent=True,
         retryable=True,
         max_retries=2,
     )
@@ -108,16 +115,20 @@ class UpdateLeaveBalanceTool(BaseTool):
         payload = UpdateLeaveBalanceInput.model_validate(inputs.model_dump())
         store = get_hr_store()
         try:
-            if store.get_employee(payload.employee_id) is None:
+            if store.get_employee(
+                payload.employee_id,
+                organization_id=context.organization_id,
+            ) is None:
                 raise ToolNotFoundError(f"Employee {payload.employee_id} was not found in the HR store.")
             if payload.days <= 0:
                 raise ToolInvalidInputError("Leave days must be greater than zero.")
             result = store.update_leave_balance(
-                workflow_id=payload.workflow_id,
+                workflow_id=payload.workflow_id or context.workflow_id,
                 employee_id=payload.employee_id,
                 days=payload.days,
                 leave_type=payload.leave_type,
                 start_date=payload.start_date,
+                organization_id=context.organization_id,
             )
         except SimulatedServiceError as error:
             raise from_service_error(error) from error

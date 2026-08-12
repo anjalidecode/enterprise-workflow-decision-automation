@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.agents.common import combine_patches, node_update
+from app.agents.common import combine_patches, merge_entities, node_update
 from app.memory.facade import append_short_term
 from app.orchestration.state import WorkflowState
 from app.services.leave_parser import parse_leave_request
@@ -51,6 +51,13 @@ def planner_agent(state: WorkflowState) -> dict[str, Any]:
         "planner",
         summary,
         tasks=list(LEAVE_TASKS),
+        entities=merge_entities(
+            state,
+            employee_id=parsed.employee_id,
+            leave_type=parsed.leave_type,
+            days=parsed.days,
+            start_date=parsed.start_date,
+        ),
         errors=errors,
         metadata={
             **state.get("metadata", {}),

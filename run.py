@@ -41,9 +41,17 @@ def main() -> None:
     print("Leave & Attendance Workflow")
     print("=" * 64)
     print(f"Workflow ID:     {result.get('workflow_id')}")
+    print(f"Request ID:      {result.get('request_id')}")
     print(f"Workflow type:   {result.get('workflow_type')}")
+    print(f"Organization:    {result.get('organization_id') or '(none)'}")
+    print(f"Initiated by:    {result.get('initiated_by') or result.get('user_id') or '(none)'}")
+    print(f"User role:       {result.get('user_role') or '(none)'}")
     print(f"Status:          {result.get('status')}")
     print(f"Current stage:   {result.get('current_stage')}")
+    print(f"Created at:      {result.get('created_at')}")
+    entities = result.get("entities") or {}
+    if entities:
+        print(f"Entities:        {entities}")
 
     _print_section("Agents executed")
     outputs = result.get("agent_outputs") or []
@@ -64,6 +72,8 @@ def main() -> None:
             f"attempts={trace.get('attempts')} "
             f"duration_ms={trace.get('duration_ms'):.1f}"
         )
+        if trace.get("organization_id"):
+            line += f" org={trace.get('organization_id')}"
         if trace.get("error_code"):
             line += f" error={trace.get('error_code')}"
         print(line)

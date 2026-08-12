@@ -1,4 +1,9 @@
-"""JSONL long-term memory of compact workflow outcomes."""
+"""JSONL long-term memory of compact workflow outcomes.
+
+Development backend for LongTermMemoryPort. Scoped by organization_id +
+employee_id + workflow_type so the same employee id in two companies never
+collides. Empty organization_id preserves current single-tenant behavior.
+"""
 
 from __future__ import annotations
 
@@ -18,8 +23,14 @@ def _utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
 
+def _org_matches(record_org: str | None, query_org: str) -> bool:
+    stored = record_org or ""
+    requested = query_org or ""
+    return stored == requested
+
+
 class LongTermMemory:
-    """Persistent compact facts, scoped by employee_id and workflow_type."""
+    """Persistent compact facts, scoped by organization, employee, and workflow type."""
 
     def __init__(self, path: Path | None = None) -> None:
         self._path = path or DEFAULT_PATH
@@ -50,11 +61,14 @@ class LongTermMemory:
     def write(self, payload: dict) -> MemoryRecord:
         cleaned = sanitize_long_term_payload(payload)
         timestamp = str(cleaned.get("timestamp") or _utc_now())
+        organization_id = str(cleaned.get("organization_id") or "")
         record = MemoryRecord(
             memory_id=str(uuid.uuid4()),
             layer="long_term",
             kind="outcome",
             workflow_id=cleaned.get("workflow_id"),
+            organization_id=organization_id,
+            user_id=cleaned.get("user_id"),
             employee_id=cleaned.get("employee_id"),
             workflow_type=cleaned.get("workflow_type"),
             content=str(cleaned.get("rationale_summary") or ""),
@@ -69,12 +83,15 @@ class LongTermMemory:
         self,
         *,
         employee_id: str,
+        organization_id: str = "",
         workflow_type: str | None = None,
     ) -> list[MemoryRecord]:
         target = employee_id.strip().upper()
         results: list[MemoryRecord] = []
         for record in self._records:
             if str(record.employee_id or "").upper() != target:
+                continue
+            if not _org_matches(record.organization_id, organization_id):
                 continue
             if workflow_type and record.workflow_type != workflow_type:
                 continue

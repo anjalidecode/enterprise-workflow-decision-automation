@@ -1,4 +1,8 @@
-"""In-memory simulated HR system, seeded from JSON. JSON files are never written."""
+"""In-memory simulated HR system, seeded from JSON. JSON files are never written.
+
+This is the development implementation of HREmployeeService. Later it can be
+replaced with a PostgreSQL or external HRIS adapter behind the same interface.
+"""
 
 from __future__ import annotations
 
@@ -7,10 +11,20 @@ from typing import Any
 
 from app.services.errors import SimulatedServiceError
 from app.services.hr_data import load_employees, load_leave_policy
+from app.tools.idempotency import build_idempotency_key
 
 
 def _employee_key(employee_id: str) -> str:
     return employee_id.strip().upper()
+
+
+def _org_matches(employee: dict[str, Any], organization_id: str) -> bool:
+    """Empty organization_id matches the current single-tenant seed data."""
+
+    if not organization_id:
+        return True
+    employee_org = str(employee.get("organization_id") or "")
+    return employee_org in {"", organization_id}
 
 
 class SimulatedHRStore:
@@ -45,24 +59,40 @@ class SimulatedHRStore:
             self._faults[operation] = remaining - 1
             raise SimulatedServiceError(f"Simulated HR service error during {operation}.")
 
-    def get_employee(self, employee_id: str) -> dict[str, Any] | None:
+    def get_employee(
+        self,
+        employee_id: str,
+        *,
+        organization_id: str = "",
+    ) -> dict[str, Any] | None:
         self._maybe_fault("get_employee")
         employee = self._employees.get(_employee_key(employee_id))
-        return copy.deepcopy(employee) if employee is not None else None
+        if employee is None or not _org_matches(employee, organization_id):
+            return None
+        return copy.deepcopy(employee)
 
-    def get_leave_balance(self, employee_id: str, leave_type: str = "annual") -> int | None:
+    def get_leave_balance(
+        self,
+        employee_id: str,
+        leave_type: str = "annual",
+        *,
+        organization_id: str = "",
+    ) -> int | None:
         self._maybe_fault("get_leave_balance")
         employee = self._employees.get(_employee_key(employee_id))
-        if employee is None:
+        if employee is None or not _org_matches(employee, organization_id):
             return None
         balances = employee.get("leave_balances") or {}
         if leave_type not in balances:
             return None
         return int(balances[leave_type])
 
-    def get_leave_policy(self) -> dict[str, Any]:
+    def get_leave_policy(self, *, organization_id: str = "") -> dict[str, Any]:
         self._maybe_fault("get_leave_policy")
-        return copy.deepcopy(self._policy)
+        policy = copy.deepcopy(self._policy)
+        if organization_id:
+            policy["organization_id"] = organization_id
+        return policy
 
     def update_leave_balance(
         self,
@@ -72,18 +102,27 @@ class SimulatedHRStore:
         days: int,
         leave_type: str = "annual",
         start_date: str | None = None,
+        organization_id: str = "",
     ) -> dict[str, Any]:
-        """Deduct leave. Idempotent for the same workflow request key."""
+        """Deduct leave. Idempotent for the same org/workflow request key."""
 
         self._maybe_fault("update_leave_balance")
-        key = f"{workflow_id}:{_employee_key(employee_id)}:{leave_type}:{days}:{start_date or ''}"
+        key = build_idempotency_key(
+            capability="leave.balance.update",
+            workflow_id=workflow_id,
+            organization_id=organization_id,
+            employee_id=_employee_key(employee_id),
+            leave_type=leave_type,
+            days=days,
+            start_date=start_date or "",
+        )
         if key in self._applied_leave_updates:
             replay = copy.deepcopy(self._applied_leave_updates[key])
             replay["idempotent_replay"] = True
             return replay
 
         stored = self._employees.get(_employee_key(employee_id))
-        if stored is None:
+        if stored is None or not _org_matches(stored, organization_id):
             raise KeyError(f"Employee {employee_id} was not found in the HR store.")
 
         balances = dict(stored.get("leave_balances") or {})
@@ -99,6 +138,7 @@ class SimulatedHRStore:
             "previous_balance": previous,
             "new_balance": new_balance,
             "idempotent_replay": False,
+            "organization_id": organization_id,
             "source": "simulated_hr_store",
         }
         self._applied_leave_updates[key] = copy.deepcopy(result)

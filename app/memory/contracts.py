@@ -18,6 +18,8 @@ class MemoryRecord(BaseModel):
     layer: MemoryLayer
     kind: MemoryKind
     workflow_id: str | None = None
+    organization_id: str = ""
+    user_id: str | None = None
     employee_id: str | None = None
     workflow_type: str | None = None
     content: str
@@ -34,3 +36,7 @@ class MemoryAccess(BaseModel):
     memory_ids: list[str] = Field(default_factory=list)
     summary: str
     influenced_decision: bool = False
+    organization_id: str = ""
+    workflow_id: str = ""
+    user_id: str = ""
+    timestamp: str = ""

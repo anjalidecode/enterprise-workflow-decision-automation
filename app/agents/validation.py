@@ -6,8 +6,11 @@ from typing import Any
 
 from app.agents.common import combine_patches, node_update
 from app.memory.facade import search_short_term
+from app.models.decision import EXECUTABLE_OUTCOMES, HUMAN_APPROVAL_OUTCOMES
 from app.orchestration.state import WorkflowState
 from app.tools.catalog import get_registry
+
+VALID_OUTCOMES = {"approve", "reject", "pending_approval", "escalate", "recommend"}
 
 
 def validation_agent(state: WorkflowState) -> dict[str, Any]:
@@ -19,7 +22,7 @@ def validation_agent(state: WorkflowState) -> dict[str, Any]:
     _, notes_patch = search_short_term(state, agent="validation")
 
     outcome = decision.get("outcome")
-    if outcome not in {"approve", "reject", "pending_approval"}:
+    if outcome not in VALID_OUTCOMES:
         issues.append("Decision outcome is missing or invalid.")
 
     if not decision.get("rationale"):
@@ -41,21 +44,21 @@ def validation_agent(state: WorkflowState) -> dict[str, Any]:
             if action_type not in write_names:
                 issues.append(f"Pending action '{action_type}' is not a registered write tool.")
 
-    if outcome == "pending_approval" and not state.get("requires_human_approval"):
-        issues.append("Pending approval decision is missing the human-approval flag.")
+    if outcome in HUMAN_APPROVAL_OUTCOMES and not state.get("requires_human_approval"):
+        issues.append("Human-approval decision is missing the human-approval flag.")
 
-    if outcome == "reject" and decision.get("executable"):
-        issues.append("Reject decisions must not be executable.")
+    if outcome in {"reject", "recommend"} and decision.get("executable"):
+        issues.append(f"{outcome} decisions must not be executable.")
 
     passed = len(issues) == 0
 
     if not passed:
         route = "response"
         status = "validation_failed"
-    elif state.get("requires_human_approval"):
+    elif state.get("requires_human_approval") or outcome in HUMAN_APPROVAL_OUTCOMES:
         route = "response"
         status = "awaiting_human_approval"
-    elif outcome == "approve" and decision.get("executable"):
+    elif outcome in EXECUTABLE_OUTCOMES and decision.get("executable"):
         route = "action"
         status = "validated"
     else:

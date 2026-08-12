@@ -35,3 +35,6 @@ class ToolExecutionRecord(BaseModel):
     error_code: str | None = None
     input_summary: dict[str, Any] = Field(default_factory=dict)
     timestamp: str
+    workflow_id: str = ""
+    organization_id: str = ""
+    user_id: str = ""

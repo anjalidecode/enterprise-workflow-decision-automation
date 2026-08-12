@@ -4,7 +4,7 @@ HR Operations workflow automation and decision-support platform. Specialized age
 
 ## Current implementation (Modules 1–3)
 
-**Module 1 — Agent Foundation** delivered the Leave & Attendance workflow: nine specialized LangGraph nodes, shared `WorkflowState`, conditional routing, and human-approval handling.
+**Module 1 — Agent Foundation** delivered the Leave & Attendance workflow: nine specialized LangGraph nodes, shared `WorkflowState`, conditional routing, and human-approval handling. The agent layer is now workflow-agnostic and organization-ready: optional `organization_id` / `user_id` / `user_role`, reusable `entities`, generic `WorkflowDecision` outcomes (`approve` / `reject` / `pending_approval` / `escalate` / `recommend`), and `AgentSpec` contracts for each core agent. Leave remains the first working domain workflow on top of that engine.
 
 **Module 2 — Tool Integration & Intelligent Action Execution** adds a reusable tool layer between agents and enterprise services. Agents request capabilities through a selector, registry, and executor.
 
@@ -84,7 +84,10 @@ The tool layer gives every workflow the same contract: typed inputs, authorizati
 
 - **Registry** (`app/tools/registry.py`): explicit registration. Unknown names fail closed.
 - **Selector** (`app/tools/selector.py`): deterministic. An agent may only use `allowed_agents`. Write tools require the Action Agent and `validated=True`. No LLM tool-picking.
-- **Executor** (`app/tools/executor.py`): Pydantic input validation, authorization, tenacity retries for transient `SERVICE_ERROR` only, duration/attempt tracing, notification log fallback.
+- **Executor** (`app/tools/executor.py`): Pydantic input validation, authorization, tenacity retries for transient `SERVICE_ERROR` only, duration/attempt tracing, notification log fallback. ToolContext now carries optional `organization_id` / `user_id` / `user_role` from WorkflowState into every execution and audit trace.
+- **Service boundary** (`app/services/interfaces.py`): tools depend on `HREmployeeService` and `NotificationServicePort`. The current in-memory store and inbox are implementations; PostgreSQL/email adapters can replace them later without changing agents or ToolExecutor.
+- **Idempotency** (`app/tools/idempotency.py`): reusable write keys include organization + workflow + capability so retries cannot double-apply leave updates or notifications.
+- **Planned domains** (`app/tools/domains.py`): documented recruitment/onboarding/attendance/performance/training/offboarding capabilities for future registration. Not implemented yet.
 
 ## Seven leave tools
 
@@ -126,26 +129,27 @@ Error codes: `NOT_FOUND`, `INVALID_INPUT`, `SERVICE_ERROR`, `FORBIDDEN`. Invalid
 
 ## Module 3 — Memory
 
-Memory exists so agents can share a run notebook, retrieve handbook explanations, and recall compact prior outcomes. It does **not** replace `WorkflowState`, tools, or the structured leave policy.
+Memory exists so agents can share a run notebook, retrieve handbook explanations, and recall compact prior outcomes. It does **not** replace `WorkflowState`, tools, or the structured leave policy. Structured rules/tools remain authoritative for balance checks, policy violations, validation, and authorization.
 
-- **WorkflowState:** current request, employee data, policy/analysis/decision, tool traces, `memory_accesses`.
-- **Short-term memory:** in-process notes scoped to `workflow_id`. Cleared between runs. Not a chatbot history.
-- **Knowledge memory:** curated handbook text under `data/knowledge/leave/handbook.md`, searched with an offline lexical retriever. Replaceable later with Chroma. Never overrides `leave_policy.json`.
-- **Long-term memory:** JSONL file of allowlisted outcome facts (`data/memory/long_term.jsonl`, gitignored). Query by `employee_id` + `workflow_type`.
-- **Facade:** agents call `app.memory.facade` only. Permissions are enforced per agent.
-- **Safety:** long-term writes drop unknown fields and reject secrets, tool payloads, and notification bodies.
-- **Tracing:** every read/write appends a `MemoryAccess` to `WorkflowState` for the CLI/UI.
+- **WorkflowState:** current request, employee data, policy/analysis/decision, tool traces, `memory_accesses`. Live coordination contract.
+- **Short-term memory:** in-process notes scoped to `organization_id + workflow_id`. Cleared between runs. Not a chatbot history.
+- **Knowledge memory:** offline lexical search over `data/knowledge/` (global/domain folders today; future `organizations/{organization_id}/...`). `KnowledgeStore.search(query, organization_id, workflow_type, filters)` returns global docs plus that org only. Never overrides `leave_policy.json`.
+- **Long-term memory:** JSONL development backend (`data/memory/long_term.jsonl`, gitignored) behind `LongTermMemoryPort`. Scoped by `organization_id + employee_id + workflow_type` so the same employee id in two companies never collides. Swappable to PostgreSQL later without changing agents.
+- **Facade:** agents call `app.memory.facade` only (`MemoryAccessContext` carries org/user/role extension points). No direct JSONL, file, or vector-DB access from agents.
+- **Safety:** long-term writes keep an allowlist and reject secrets, tokens, tool payloads, notification bodies, and full employee records.
+- **Tracing:** every read/write appends a `MemoryAccess` (agent, layer, operation, memory ids, summary, org/workflow/user, timestamp, influenced_decision) without sensitive content.
 
-Context-aware example: handbook text explains 5-day manager approval; prior overlapping leave can add a warning and lower confidence; insufficient balance still rejects.
+Cross-workflow lifecycle context (recruitment → onboarding → leave → …) is supported by `workflow_type` scoping, not one unstructured employee dump.
 
 | Requirement | Implementation |
 |-------------|----------------|
 | Specialized agents | Unchanged nine LangGraph nodes |
 | Communication / information exchange | State + short-term notes + memory_accesses |
-| Short-term conversational memory | Workflow-scoped notebook |
-| Long-term knowledge retention | Handbook retriever + JSONL outcomes |
-| Shared memory repositories | Facade over three stores |
+| Short-term conversational memory | Org + workflow-scoped notebook |
+| Long-term knowledge retention | Org-aware handbook retriever + JSONL outcomes |
+| Shared memory repositories | Facade over three replaceable stores |
 | Context-aware decisions | Warnings/citations/confidence only |
+| Multi-tenant isolation | organization_id on records + knowledge visibility |
 
 ## Setup
 

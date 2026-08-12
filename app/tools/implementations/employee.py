@@ -55,7 +55,10 @@ class GetEmployeeTool(BaseTool):
     def execute(self, inputs: BaseModel, context: ToolContext) -> dict[str, Any]:
         payload = GetEmployeeInput.model_validate(inputs.model_dump())
         try:
-            employee = get_hr_store().get_employee(payload.employee_id)
+            employee = get_hr_store().get_employee(
+                payload.employee_id,
+                organization_id=context.organization_id,
+            )
         except SimulatedServiceError as error:
             raise from_service_error(error) from error
         if employee is None:
@@ -89,10 +92,17 @@ class GetLeaveBalanceTool(BaseTool):
         payload = GetLeaveBalanceInput.model_validate(inputs.model_dump())
         store = get_hr_store()
         try:
-            employee = store.get_employee(payload.employee_id)
+            employee = store.get_employee(
+                payload.employee_id,
+                organization_id=context.organization_id,
+            )
             if employee is None:
                 raise ToolNotFoundError(f"Employee {payload.employee_id} was not found in the HR store.")
-            balance = store.get_leave_balance(payload.employee_id, payload.leave_type)
+            balance = store.get_leave_balance(
+                payload.employee_id,
+                payload.leave_type,
+                organization_id=context.organization_id,
+            )
         except SimulatedServiceError as error:
             raise from_service_error(error) from error
         if balance is None:

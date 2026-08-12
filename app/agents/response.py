@@ -12,6 +12,8 @@ _OUTCOME_LABELS = {
     "approve": "approved",
     "reject": "rejected",
     "pending_approval": "pending_approval",
+    "escalate": "escalated",
+    "recommend": "recommended",
 }
 
 

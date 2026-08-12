@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.agents.common import combine_patches, leave_request_from_state, node_update
+from app.agents.common import combine_patches, leave_request_from_state, merge_entities, node_update
 from app.memory.facade import append_short_term, recall_long_term
 from app.orchestration.state import WorkflowState
 from app.tools.executor import invoke_tool
@@ -98,6 +98,12 @@ def research_agent(state: WorkflowState) -> dict[str, Any]:
         summary,
         employee_data=employee_data,
         retrieved_data=retrieved,
+        entities=merge_entities(
+            state,
+            employee_id=employee_id,
+            department=(employee_data or {}).get("department"),
+            manager=(employee_data or {}).get("manager"),
+        ),
         errors=errors,
         **combine_patches(*patches),
     )
