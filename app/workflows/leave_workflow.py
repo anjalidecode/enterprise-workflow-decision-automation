@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from langgraph.graph import END, START, StateGraph
 from langgraph.graph.state import CompiledStateGraph
@@ -83,14 +83,38 @@ def build_leave_workflow() -> CompiledStateGraph:
     return build_leave_graph().compile()
 
 
-def run_leave_workflow(user_request: str, *, reset_runtime: bool = True) -> WorkflowState:
-    """Execute a leave workflow run and return the final shared state."""
+def run_leave_workflow(
+    user_request: str,
+    *,
+    reset_runtime: bool = True,
+    organization_id: str = "",
+    user_id: str = "",
+    initiated_by: str = "",
+    user_role: str = "",
+    request_id: str | None = None,
+    entities: dict[str, Any] | None = None,
+    workflow_type: str = "",
+) -> WorkflowState:
+    """Execute a leave workflow run and return the final shared state.
+
+    Optional org/user/entity kwargs are additive for the Module 4 engine.
+    Existing callers that only pass user_request keep identical behavior.
+    """
 
     reset_short_term_memory()
     if reset_runtime:
         reset_hr_store()
         reset_notification_service()
     graph = build_leave_workflow()
-    initial_state = create_initial_state(user_request)
+    initial_state = create_initial_state(
+        user_request,
+        organization_id=organization_id,
+        user_id=user_id,
+        initiated_by=initiated_by,
+        user_role=user_role,
+        request_id=request_id,
+        entities=entities,
+        workflow_type=workflow_type,
+    )
     result = graph.invoke(initial_state)
     return result  # type: ignore[return-value]

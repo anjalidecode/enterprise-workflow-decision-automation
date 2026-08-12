@@ -2,13 +2,15 @@
 
 HR Operations workflow automation and decision-support platform. Specialized agents collaborate through shared structured state, coordinated by a LangGraph orchestrator. This is not a chatbot and not a single LLM with tools.
 
-## Current implementation (Modules 1–3)
+## Current implementation (Modules 1–4A)
 
 **Module 1 — Agent Foundation** delivered the Leave & Attendance workflow: nine specialized LangGraph nodes, shared `WorkflowState`, conditional routing, and human-approval handling. The agent layer is now workflow-agnostic and organization-ready: optional `organization_id` / `user_id` / `user_role`, reusable `entities`, generic `WorkflowDecision` outcomes (`approve` / `reject` / `pending_approval` / `escalate` / `recommend`), and `AgentSpec` contracts for each core agent. Leave remains the first working domain workflow on top of that engine.
 
 **Module 2 — Tool Integration & Intelligent Action Execution** adds a reusable tool layer between agents and enterprise services. Agents request capabilities through a selector, registry, and executor.
 
 **Module 3 — Agent Coordination & Memory Management** adds short-term, knowledge, and long-term memory beside LangGraph. `WorkflowState` remains the live coordination contract. Memory may explain, warn, or adjust confidence; structured tools and `validate_leave_policy` remain authoritative.
+
+**Module 4A — Workflow Platform Spine** adds `WorkflowSpec`, `WorkflowRegistry`, deterministic `WorkflowRouter`, and `WorkflowEngine` returning `WorkflowResult` (state + audit snapshot + metrics). `run.py` is a thin engine client. Only Leave & Attendance is registered; other HR workflows come in later phases.
 
 ## Architecture
 
@@ -221,5 +223,5 @@ Tests are deterministic and do not call Gemini.
 
 ## Planned modules
 
-- **Module 4:** Remaining HR workflows (recruitment, onboarding, policy queries, performance, offboarding), dynamic orchestration, recommendations.
+- **Module 4:** Workflow platform spine (4A done: registry/router/engine). Remaining phases add recruitment, onboarding, attendance, performance, training, offboarding, and employee services on the same engine.
 - **Module 5:** REST APIs, web dashboard, monitoring, logging, deployment, and performance work.

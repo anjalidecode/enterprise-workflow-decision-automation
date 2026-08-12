@@ -40,11 +40,16 @@ def test_leave_decision_extends_workflow_decision() -> None:
         employee_id="E001",
         requested_days=3,
         entity_refs={"employee_id": "E001"},
+        evidence=["balance check"],
+        warnings=[],
+        blockers=[],
+        influenced_by=[],
     )
     payload = decision.model_dump()
     assert payload["outcome"] == "approve"
     assert payload["employee_id"] == "E001"
     assert payload["entity_refs"]["employee_id"] == "E001"
+    assert payload["evidence"] == ["balance check"]
     assert issubclass(LeaveDecision, WorkflowDecision)
 
 

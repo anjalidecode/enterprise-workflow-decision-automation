@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Temporary CLI for running the leave & attendance workflow."""
+"""Thin CLI client for the enterprise workflow engine."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from app.workflows.leave_workflow import run_leave_workflow
+from app.workflows.engine import get_workflow_engine
 
 DEFAULT_REQUEST = "Check whether employee E001 can take 3 days of leave from 2026-08-17."
 
@@ -25,30 +25,59 @@ def _print_section(title: str) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Run the HR leave & attendance decision workflow."
+        description="Run an HR workflow through the WorkflowEngine."
     )
     parser.add_argument(
         "request",
         nargs="?",
         default=DEFAULT_REQUEST,
-        help="Natural-language leave request",
+        help="Natural-language business request",
     )
+    parser.add_argument(
+        "--workflow-type",
+        default=None,
+        help="Optional explicit workflow_type override (e.g. leave_attendance)",
+    )
+    parser.add_argument("--organization-id", default="", help="Optional organization id")
+    parser.add_argument("--user-id", default="", help="Optional user id")
+    parser.add_argument("--user-role", default="", help="Optional user role")
     args = parser.parse_args()
 
-    result = run_leave_workflow(args.request)
+    engine_result = get_workflow_engine().run(
+        args.request,
+        organization_id=args.organization_id,
+        user_id=args.user_id,
+        user_role=args.user_role,
+        workflow_type=args.workflow_type,
+    )
+    result = engine_result.state
+    audit = engine_result.audit
+    metrics = engine_result.metrics
+
+    title = "Leave & Attendance Workflow"
+    if result.get("workflow_type") and result.get("workflow_type") != "leave_attendance":
+        title = f"HR Workflow ({result.get('workflow_type')})"
+    elif engine_result.router and engine_result.router.status != "routed":
+        title = "Workflow Routing"
 
     print("=" * 64)
-    print("Leave & Attendance Workflow")
+    print(title)
     print("=" * 64)
     print(f"Workflow ID:     {result.get('workflow_id')}")
     print(f"Request ID:      {result.get('request_id')}")
-    print(f"Workflow type:   {result.get('workflow_type')}")
+    print(f"Workflow type:   {result.get('workflow_type') or '(none)'}")
     print(f"Organization:    {result.get('organization_id') or '(none)'}")
     print(f"Initiated by:    {result.get('initiated_by') or result.get('user_id') or '(none)'}")
     print(f"User role:       {result.get('user_role') or '(none)'}")
     print(f"Status:          {result.get('status')}")
     print(f"Current stage:   {result.get('current_stage')}")
     print(f"Created at:      {result.get('created_at')}")
+    if engine_result.router:
+        print(
+            f"Router:          status={engine_result.router.status} "
+            f"confidence={engine_result.router.confidence} "
+            f"hints={engine_result.router.matched_hints}"
+        )
     entities = result.get("entities") or {}
     if entities:
         print(f"Entities:        {entities}")
@@ -128,6 +157,28 @@ def main() -> None:
 
     _print_section("Final response")
     print(f"  {result.get('final_response') or '(empty)'}")
+
+    _print_section("Audit summary")
+    print(f"  Final outcome:     {audit.final_outcome or '(none)'}")
+    print(f"  Started at:        {audit.started_at}")
+    print(f"  Completed at:      {audit.completed_at}")
+    print(f"  Agents:            {len(audit.agents_executed)}")
+    print(f"  Tools:             {len(audit.tool_executions)}")
+    print(f"  Memory accesses:   {len(audit.memory_accesses)}")
+    if audit.approval_checkpoint:
+        print(f"  Approval:          {audit.approval_checkpoint.get('status')}")
+
+    _print_section("Metrics summary")
+    print(f"  Duration ms:       {metrics.duration_ms}")
+    print(f"  Agent count:       {metrics.agent_count}")
+    print(f"  Tool count:        {metrics.tool_count}")
+    print(f"  Tool success rate: {metrics.tool_success_rate:.2f}")
+    print(f"  Retry count:       {metrics.retry_count}")
+    print(f"  Validation failed: {metrics.validation_failed}")
+    print(f"  Human approval:    {metrics.human_approval_required}")
+    print(f"  Decision conf:     {metrics.decision_confidence}")
+    print(f"  Action success:    {metrics.action_success_rate:.2f}")
+    print(f"  Escalated:         {metrics.escalated}")
 
     _print_section("Errors")
     errors = result.get("errors") or []
