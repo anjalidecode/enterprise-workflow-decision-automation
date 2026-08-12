@@ -68,6 +68,21 @@ def main() -> None:
             line += f" error={trace.get('error_code')}"
         print(line)
 
+    _print_section("Memory accesses")
+    accesses = result.get("memory_accesses") or []
+    if not accesses:
+        print("  (none)")
+    for index, access in enumerate(accesses, start=1):
+        influenced = "yes" if access.get("influenced_decision") else "no"
+        print(
+            f"  {index}. agent={access.get('agent')} "
+            f"op={access.get('operation')} "
+            f"layer={access.get('layer')} "
+            f"ids={len(access.get('memory_ids') or [])} "
+            f"influenced={influenced} "
+            f"summary={access.get('summary')}"
+        )
+
     _print_section("Important state changes")
     employee = result.get("employee_data") or {}
     retrieved = result.get("retrieved_data") or {}

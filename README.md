@@ -2,13 +2,33 @@
 
 HR Operations workflow automation and decision-support platform. Specialized agents collaborate through shared structured state, coordinated by a LangGraph orchestrator. This is not a chatbot and not a single LLM with tools.
 
-## Current implementation (Module 1 + Module 2)
+## Current implementation (Modules 1–3)
 
 **Module 1 — Agent Foundation** delivered the Leave & Attendance workflow: nine specialized LangGraph nodes, shared `WorkflowState`, conditional routing, and human-approval handling.
 
-**Module 2 — Tool Integration & Intelligent Action Execution** adds a reusable tool layer between agents and enterprise services. Agents no longer read JSON or call `app.services` for HR data. They request capabilities through a selector, registry, and executor.
+**Module 2 — Tool Integration & Intelligent Action Execution** adds a reusable tool layer between agents and enterprise services. Agents request capabilities through a selector, registry, and executor.
+
+**Module 3 — Agent Coordination & Memory Management** adds short-term, knowledge, and long-term memory beside LangGraph. `WorkflowState` remains the live coordination contract. Memory may explain, warn, or adjust confidence; structured tools and `validate_leave_policy` remain authoritative.
 
 ## Architecture
+
+```
+                    WORKFLOW
+                        |
+                        v
+                  WorkflowState
+                        |
+           +------------+------------+
+           |            |            |
+           v            v            v
+      Short-Term    Knowledge    Long-Term
+        Memory        Memory       Memory
+           |            |            |
+           +------------+------------+
+                        |
+                        v
+                     Agents
+```
 
 ```
 User Request
@@ -104,6 +124,29 @@ Error codes: `NOT_FOUND`, `INVALID_INPUT`, `SERVICE_ERROR`, `FORBIDDEN`. Invalid
 | Validation and error handling | Schemas, write guards, typed errors |
 | Retry / fallback | tenacity + notification log fallback |
 
+## Module 3 — Memory
+
+Memory exists so agents can share a run notebook, retrieve handbook explanations, and recall compact prior outcomes. It does **not** replace `WorkflowState`, tools, or the structured leave policy.
+
+- **WorkflowState:** current request, employee data, policy/analysis/decision, tool traces, `memory_accesses`.
+- **Short-term memory:** in-process notes scoped to `workflow_id`. Cleared between runs. Not a chatbot history.
+- **Knowledge memory:** curated handbook text under `data/knowledge/leave/handbook.md`, searched with an offline lexical retriever. Replaceable later with Chroma. Never overrides `leave_policy.json`.
+- **Long-term memory:** JSONL file of allowlisted outcome facts (`data/memory/long_term.jsonl`, gitignored). Query by `employee_id` + `workflow_type`.
+- **Facade:** agents call `app.memory.facade` only. Permissions are enforced per agent.
+- **Safety:** long-term writes drop unknown fields and reject secrets, tool payloads, and notification bodies.
+- **Tracing:** every read/write appends a `MemoryAccess` to `WorkflowState` for the CLI/UI.
+
+Context-aware example: handbook text explains 5-day manager approval; prior overlapping leave can add a warning and lower confidence; insufficient balance still rejects.
+
+| Requirement | Implementation |
+|-------------|----------------|
+| Specialized agents | Unchanged nine LangGraph nodes |
+| Communication / information exchange | State + short-term notes + memory_accesses |
+| Short-term conversational memory | Workflow-scoped notebook |
+| Long-term knowledge retention | Handbook retriever + JSONL outcomes |
+| Shared memory repositories | Facade over three stores |
+| Context-aware decisions | Warnings/citations/confidence only |
+
 ## Setup
 
 Python 3.12 is required.
@@ -170,9 +213,9 @@ Tests are deterministic and do not call Gemini.
 - There is no dashboard, REST API, PostgreSQL, RAG, or cloud deployment yet.
 - Human approval is detected and reported; there is no approval UI.
 - Tool selection is policy-based, not LLM-based.
+- Knowledge search is lexical and offline, not a production vector database.
 
 ## Planned modules
 
-- **Module 3:** Richer agent communication, short-term and long-term memory, shared knowledge.
 - **Module 4:** Remaining HR workflows (recruitment, onboarding, policy queries, performance, offboarding), dynamic orchestration, recommendations.
 - **Module 5:** REST APIs, web dashboard, monitoring, logging, deployment, and performance work.

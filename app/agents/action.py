@@ -4,9 +4,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.agents.common import node_update
+from app.agents.common import combine_patches, node_update
+from app.memory.facade import append_short_term
 from app.orchestration.state import WorkflowState
-from app.tools.executor import invoke_tool, merge_tool_patches
+from app.tools.executor import invoke_tool
 
 
 def action_agent(state: WorkflowState) -> dict[str, Any]:
@@ -62,6 +63,13 @@ def action_agent(state: WorkflowState) -> dict[str, Any]:
             if action_type == "update_leave_balance":
                 break
 
+    _, memory_patch = append_short_term(
+        state,
+        agent="action",
+        content=f"Action executed {len(completed)} write tool(s).",
+    )
+    patches.append(memory_patch)
+
     summary = f"Executed {len(completed)} write tool(s) via the tool layer."
     return node_update(
         "action",
@@ -71,5 +79,5 @@ def action_agent(state: WorkflowState) -> dict[str, Any]:
         pending_actions=[],
         status="actions_executed",
         errors=errors,
-        **merge_tool_patches(*patches),
+        **combine_patches(*patches),
     )

@@ -1,10 +1,11 @@
-"""Validation Agent: verify the decision before any action is taken."""
+"""Validation Agent: verify the decision against authoritative structured data."""
 
 from __future__ import annotations
 
 from typing import Any
 
-from app.agents.common import node_update
+from app.agents.common import combine_patches, node_update
+from app.memory.facade import search_short_term
 from app.orchestration.state import WorkflowState
 from app.tools.catalog import get_registry
 
@@ -14,6 +15,8 @@ def validation_agent(state: WorkflowState) -> dict[str, Any]:
     analysis = state.get("analysis_results") or {}
     policy_results = state.get("policy_results") or {}
     issues: list[str] = []
+
+    _, notes_patch = search_short_term(state, agent="validation")
 
     outcome = decision.get("outcome")
     if outcome not in {"approve", "reject", "pending_approval"}:
@@ -80,4 +83,5 @@ def validation_agent(state: WorkflowState) -> dict[str, Any]:
         status=status,
         errors=errors,
         metadata=metadata,
+        **combine_patches(notes_patch),
     )

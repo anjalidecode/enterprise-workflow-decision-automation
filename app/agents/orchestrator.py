@@ -4,7 +4,8 @@ from __future__ import annotations
 
 from typing import Any
 
-from app.agents.common import node_update
+from app.agents.common import combine_patches, node_update
+from app.memory.facade import append_short_term
 from app.orchestration.state import WorkflowState
 
 LEAVE_KEYWORDS = ("leave", "time off", "pto", "vacation", "attendance")
@@ -25,6 +26,13 @@ def orchestrator_agent(state: WorkflowState) -> dict[str, Any]:
         summary = "Request is not a leave & attendance workflow; marking as unsupported."
         errors = ["Unsupported workflow type for Module 1. Only leave & attendance is available."]
 
+    _, memory_patch = append_short_term(
+        {**state, "workflow_type": workflow_type},
+        agent="orchestrator",
+        workflow_type=workflow_type,
+        content=f"Workflow started as {workflow_type}.",
+    )
+
     return node_update(
         "orchestrator",
         summary,
@@ -35,4 +43,5 @@ def orchestrator_agent(state: WorkflowState) -> dict[str, Any]:
             **state.get("metadata", {}),
             "identified_by": "orchestrator",
         },
+        **combine_patches(memory_patch),
     )

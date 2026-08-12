@@ -16,6 +16,7 @@ from app.agents.policy import policy_agent
 from app.agents.research import research_agent
 from app.agents.response import response_agent
 from app.agents.validation import validation_agent
+from app.memory.facade import reset_short_term_memory
 from app.orchestration.state import WorkflowState, create_initial_state
 from app.services.hr_store import reset_hr_store
 from app.services.notifications import reset_notification_service
@@ -85,6 +86,7 @@ def build_leave_workflow() -> CompiledStateGraph:
 def run_leave_workflow(user_request: str, *, reset_runtime: bool = True) -> WorkflowState:
     """Execute a leave workflow run and return the final shared state."""
 
+    reset_short_term_memory()
     if reset_runtime:
         reset_hr_store()
         reset_notification_service()

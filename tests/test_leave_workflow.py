@@ -163,3 +163,76 @@ def test_workflow_is_not_a_single_chatbot_call() -> None:
     assert result["decision"] != result["policy_results"]
     assert create_initial_state(VALID_REQUEST)["decision"] == {}
     assert len(result["tool_executions"]) >= 2
+
+
+def test_workflow_records_memory_accesses_and_long_term_outcome() -> None:
+    result = run_leave_workflow(VALID_REQUEST)
+    accesses = result.get("memory_accesses") or []
+    assert accesses
+    assert any(item["agent"] == "research" and item["layer"] == "long_term" for item in accesses)
+    assert any(item["agent"] == "response" and item["layer"] == "long_term" and item["operation"] == "write" for item in accesses)
+
+    from app.memory.long_term import get_long_term_store
+
+    stored = get_long_term_store().query(employee_id="E001", workflow_type="leave_attendance")
+    assert stored
+    assert stored[-1].metadata["outcome"] == "approved"
+
+
+def test_long_term_memory_persists_across_two_workflow_runs() -> None:
+    first = run_leave_workflow(VALID_REQUEST)
+    second = run_leave_workflow(VALID_REQUEST)
+    assert first["workflow_id"] != second["workflow_id"]
+    recalled = second["retrieved_data"].get("prior_outcomes", 0)
+    assert recalled >= 1
+
+
+def test_memory_cannot_override_insufficient_balance() -> None:
+    from app.memory.facade import write_long_term
+
+    seed = create_initial_state(INSUFFICIENT_REQUEST)
+    seed["workflow_type"] = "leave_attendance"
+    seed["metadata"] = {"leave_request": {"employee_id": "E002"}}
+    write_long_term(
+        seed,
+        agent="response",
+        payload={
+            "employee_id": "E002",
+            "workflow_type": "leave_attendance",
+            "outcome": "approved",
+            "days": 10,
+            "start_date": "2026-01-01",
+            "rationale_summary": "Historical approval must not override current policy.",
+            "requires_human_approval": False,
+        },
+    )
+    result = run_leave_workflow(INSUFFICIENT_REQUEST)
+    assert result["decision"]["outcome"] == "reject"
+    assert "action" not in _agent_names(result)
+
+
+def test_overlapping_history_adds_warning_but_does_not_force_reject() -> None:
+    from app.memory.facade import write_long_term
+
+    seed = create_initial_state(VALID_REQUEST)
+    seed["workflow_type"] = "leave_attendance"
+    seed["metadata"] = {"leave_request": {"employee_id": "E001"}}
+    write_long_term(
+        seed,
+        agent="response",
+        payload={
+            "employee_id": "E001",
+            "workflow_type": "leave_attendance",
+            "outcome": "approved",
+            "days": 3,
+            "start_date": "2026-08-17",
+            "rationale_summary": "Previous overlapping leave.",
+            "requires_human_approval": False,
+        },
+    )
+    result = run_leave_workflow(VALID_REQUEST)
+    warnings = result["analysis_results"].get("warnings") or []
+    assert any("overlaps" in item.lower() for item in warnings)
+    assert result["decision"]["outcome"] == "approve"
+    assert result["confidence"] < 0.92
+    assert any(item.get("influenced_decision") for item in result["memory_accesses"])

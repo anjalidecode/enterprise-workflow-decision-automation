@@ -37,6 +37,7 @@ class WorkflowState(TypedDict):
     requires_human_approval: bool
     agent_outputs: Annotated[list[AgentOutput], add]
     tool_executions: Annotated[list[dict[str, Any]], add]
+    memory_accesses: Annotated[list[dict[str, Any]], add]
     metadata: dict[str, Any]
     final_response: str
 
@@ -64,6 +65,7 @@ def create_initial_state(user_request: str) -> WorkflowState:
         requires_human_approval=False,
         agent_outputs=[],
         tool_executions=[],
+        memory_accesses=[],
         metadata={},
         final_response="",
     )

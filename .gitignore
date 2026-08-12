@@ -26,5 +26,4 @@ Thumbs.db
 # Logs
 *.log
 
-# Generated files
-*.tmp
+data/memory/long_term.jsonl
