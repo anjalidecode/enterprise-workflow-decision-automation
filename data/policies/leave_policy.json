@@ -1,0 +1,20 @@
+{
+  "policy_id": "HR-LEAVE-001",
+  "title": "Employee Annual Leave Policy",
+  "version": "1.0",
+  "leave_type": "annual",
+  "rules": {
+    "minimum_days_per_request": 1,
+    "maximum_days_per_request": 15,
+    "require_available_balance": true,
+    "require_active_employment": true,
+    "human_approval_required_if_days_gte": 5
+  },
+  "rule_notes": {
+    "minimum_days_per_request": "A leave request must be at least 1 day.",
+    "maximum_days_per_request": "A single request may not exceed 15 days.",
+    "require_available_balance": "Requested days must not exceed the available annual leave balance.",
+    "require_active_employment": "Only active employees may request leave.",
+    "human_approval_required_if_days_gte": "Requests of 5 or more days require human approval before any leave action is executed."
+  }
+}

@@ -1,0 +1,46 @@
+[
+  {
+    "employee_id": "E001",
+    "name": "Alex Rivera",
+    "department": "Engineering",
+    "manager": "E100",
+    "employment_status": "active",
+    "leave_balances": {
+      "annual": 12,
+      "sick": 8
+    }
+  },
+  {
+    "employee_id": "E002",
+    "name": "Jordan Chen",
+    "department": "Finance",
+    "manager": "E101",
+    "employment_status": "active",
+    "leave_balances": {
+      "annual": 2,
+      "sick": 5
+    }
+  },
+  {
+    "employee_id": "E003",
+    "name": "Sam Patel",
+    "department": "Human Resources",
+    "manager": "E102",
+    "employment_status": "inactive",
+    "leave_balances": {
+      "annual": 10,
+      "sick": 6
+    }
+  },
+  {
+    "employee_id": "E100",
+    "name": "Morgan Blake",
+    "department": "Engineering",
+    "manager": null,
+    "employment_status": "active",
+    "leave_balances": {
+      "annual": 15,
+      "sick": 8
+    }
+  }
+]
