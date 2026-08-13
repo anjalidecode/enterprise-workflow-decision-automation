@@ -33,6 +33,7 @@ SAFE_INPUT_KEYS = (
     "days",
     "leave_type",
     "start_date",
+    "end_date",
     "workflow_id",
     "organization_id",
     "policy_id",
@@ -41,6 +42,19 @@ SAFE_INPUT_KEYS = (
     "recipient_id",
     "score",
     "slot",
+    "month",
+    "year",
+    "period",
+    "review_period",
+    "course_id",
+    "request_id",
+    "category",
+    "document_type",
+    "severity",
+    "task_type",
+    "asset_id",
+    "system",
+    "privileged",
 )
 
 

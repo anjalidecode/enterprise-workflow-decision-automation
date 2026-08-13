@@ -26,7 +26,7 @@ LEAVE_APPROVAL = "Check whether employee E001 can take 8 days of leave from 2026
 def test_workflow_spec_creation() -> None:
     spec = WorkflowSpec(
         workflow_type="leave_attendance",
-        name="Leave & Attendance",
+        name="Leave Management",
         description="Leave workflow",
         supported_request_hints=["leave"],
         required_agents=["orchestrator"],
@@ -40,6 +40,7 @@ def test_workflow_spec_creation() -> None:
     assert spec.workflow_type == "leave_attendance"
     assert "leave" in spec.supported_request_hints
     assert LEAVE_WORKFLOW_SPEC.workflow_type == "leave_attendance"
+    assert LEAVE_WORKFLOW_SPEC.name == "Leave Management"
     assert LEAVE_WORKFLOW_SPEC.entry_node == "orchestrator"
 
 
@@ -55,7 +56,7 @@ def test_registry_registration_and_lookup() -> None:
     assert "offboarding" in types
     assert "hr_services" in types
     registered = registry.get("leave_attendance")
-    assert registered.spec.name == "Leave & Attendance"
+    assert registered.spec.name == "Leave Management"
     assert registered.runner is not None
     specs = registry.list_workflows()
     assert {item.workflow_type for item in specs} >= {

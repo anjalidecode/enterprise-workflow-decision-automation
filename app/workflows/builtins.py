@@ -49,10 +49,12 @@ from app.workflows.registry import WorkflowRegistry
 
 LEAVE_WORKFLOW_SPEC = WorkflowSpec(
     workflow_type="leave_attendance",
-    name="Leave & Attendance",
+    name="Leave Management",
     description=(
         "Evaluate leave requests against employee records, leave balances, and "
-        "structured leave policy. Supports approve, reject, and human approval paths."
+        "structured leave policy. Supports approve, reject, and human approval paths. "
+        "Distinct from the attendance analytics workflow; informational leave-balance "
+        "inquiries may also be handled by hr_services."
     ),
     supported_request_hints=[
         "leave",
@@ -61,6 +63,9 @@ LEAVE_WORKFLOW_SPEC = WorkflowSpec(
         "vacation",
         "annual leave",
         "sick leave",
+        "days of leave",
+        "take leave",
+        "leave request",
     ],
     required_agents=list(AGENT_NODES),
     required_tool_capabilities=[
@@ -400,10 +405,9 @@ HR_SERVICES_WORKFLOW_SPEC = WorkflowSpec(
     supported_request_hints=[
         "hr services",
         "hr service",
-        "human resources",
-        "hr request",
         "hr support",
         "hr ticket",
+        "hr support ticket",
         "employment certificate",
         "experience letter",
         "employment verification",
@@ -418,7 +422,8 @@ HR_SERVICES_WORKFLOW_SPEC = WorkflowSpec(
         "leave balance inquiry",
         "attendance inquiry",
         "hr document",
-        "employee request",
+        "open an hr",
+        "hr paperwork",
     ],
     required_agents=list(HR_SERVICES_AGENT_NODES),
     required_tool_capabilities=[

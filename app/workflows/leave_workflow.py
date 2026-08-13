@@ -1,4 +1,4 @@
-"""Leave & Attendance workflow graph (LangGraph)."""
+"""Leave management workflow graph (LangGraph). Historical module path: leave_attendance."""
 
 from __future__ import annotations
 

@@ -54,11 +54,12 @@ def main() -> None:
     audit = engine_result.audit
     metrics = engine_result.metrics
 
-    title = "Leave & Attendance Workflow"
-    if result.get("workflow_type") and result.get("workflow_type") != "leave_attendance":
-        title = f"HR Workflow ({result.get('workflow_type')})"
-    elif engine_result.router and engine_result.router.status != "routed":
+    workflow_type = str(result.get("workflow_type") or "")
+    title = "Enterprise Workflow Platform"
+    if engine_result.router and engine_result.router.status != "routed":
         title = "Workflow Routing"
+    elif workflow_type:
+        title = f"HR Workflow ({workflow_type})"
 
     print("=" * 64)
     print(title)

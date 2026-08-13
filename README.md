@@ -1,159 +1,124 @@
 # Development of Enterprise Workflow Platform with Decision Automation System — Group 1
 
-HR Operations workflow automation and decision-support platform. Specialized agents collaborate through shared structured state, coordinated by a LangGraph orchestrator. This is not a chatbot and not a single LLM with tools.
+HR operations workflow automation and decision-support platform. Specialized agents collaborate through shared structured state, coordinated by a LangGraph orchestrator. This is **not** a chatbot and not a single LLM with tools.
 
-## Current implementation (Modules 1–4A)
+## Current status (Modules 1–4 complete)
 
-**Module 1 — Agent Foundation** delivered the Leave & Attendance workflow: nine specialized LangGraph nodes, shared `WorkflowState`, conditional routing, and human-approval handling. The agent layer is now workflow-agnostic and organization-ready: optional `organization_id` / `user_id` / `user_role`, reusable `entities`, generic `WorkflowDecision` outcomes (`approve` / `reject` / `pending_approval` / `escalate` / `recommend`), and `AgentSpec` contracts for each core agent. Leave remains the first working domain workflow on top of that engine.
+| Module | Scope |
+|--------|--------|
+| **1** | Agent foundation, `WorkflowState`, leave workflow prototype |
+| **2** | Tool registry / selector / executor, simulated HR adapters |
+| **3** | MemoryFacade (short-term, knowledge, long-term) |
+| **4A** | Platform spine: `WorkflowSpec`, Registry, Router, Engine, audit, metrics |
+| **4B–4H** | Eight domain workflows on the same engine |
 
-**Module 2 — Tool Integration & Intelligent Action Execution** adds a reusable tool layer between agents and enterprise services. Agents request capabilities through a selector, registry, and executor.
+**Module 4 evaluation / hardening** verified that all workflows share one platform path:
 
-**Module 3 — Agent Coordination & Memory Management** adds short-term, knowledge, and long-term memory beside LangGraph. `WorkflowState` remains the live coordination contract. Memory may explain, warn, or adjust confidence; structured tools and `validate_leave_policy` remain authoritative.
+`Router → Registry → WorkflowEngine → LangGraph → Agents → Tools → Policies → Memory/Knowledge → Decision → Validation → Actions → Human approval → Audit → Metrics`
 
-**Module 4A — Workflow Platform Spine** adds `WorkflowSpec`, `WorkflowRegistry`, deterministic `WorkflowRouter`, and `WorkflowEngine` returning `WorkflowResult` (state + audit snapshot + metrics). `run.py` is a thin engine client.
-
-**Module 4B/C — Recruitment Workflow** registers `recruitment` on the same engine with specialized recruitment agents, recruitment tools, simulated jobs/candidates data, policy validation, human approval before shortlist/interview, and full audit/metrics tracing.
+**Do not treat this as production deployment.** HR stores, notifications, and approval checkpoints are simulated.
 
 ## Architecture
-
-```
-                    WORKFLOW
-                        |
-                        v
-                  WorkflowState
-                        |
-           +------------+------------+
-           |            |            |
-           v            v            v
-      Short-Term    Knowledge    Long-Term
-        Memory        Memory       Memory
-           |            |            |
-           +------------+------------+
-                        |
-                        v
-                     Agents
-```
 
 ```
 User Request
     │
     ▼
-Orchestrator Agent
+WorkflowRouter  ──► WorkflowRegistry
     │
     ▼
-Planner Agent
+WorkflowEngine.run() / resume()
     │
     ▼
-Research Agent ──► employee.lookup, employee.leave_balance
+Domain LangGraph workflow (WorkflowState)
+    │
+    ├── Agents (planner → research → policy → analysis → decision → validation → action/response)
+    ├── Tools (Selector → Registry → Executor → simulated services)
+    ├── MemoryFacade (short-term / knowledge / long-term)
+    └── KnowledgeStore (offline lexical handbook search)
     │
     ▼
-Policy Agent ──► policy.lookup, policy.validate_leave
-    │
-    ▼
-Analysis Agent ──► leave.impact
-    │
-    ▼
-Decision Agent
-    │
-    ▼
-Validation Agent
-    │
-    ├── reject / invalid / human approval ──► Response ──► END
-    │
-    └── approved + executable
-          └──► Action Agent ──► leave.balance.update, notification.send
-                 └──► Response ──► END
+WorkflowResult { state, audit, metrics, router, spec_version }
 ```
 
-Tool path used by Research, Policy, Analysis, and Action:
+Shared platform contracts live under `app/workflows/` (`contracts`, `registry`, `router`, `engine`, `results`, `builtins`). Domain graphs live beside them as `*_workflow.py`. Agents never invent a parallel engine.
 
-```
-Agent
-  → Tool Selector     capability + allowlist + write guards
-  → Tool Registry     explicit name/capability lookup
-  → Tool Executor     validate, authorize, retry, log
-  → Tool
-  → Simulated HR store / notification service
-  → ToolResult
-  → WorkflowState (including tool_executions)
-```
+### Decision authority (invariant)
 
-## Why the tool layer exists
+| Layer | Role |
+|-------|------|
+| Structured tools + policy JSON | **Authoritative** for eligibility, violations, balances, prerequisites, authorization |
+| Memory + knowledge | **Context only** — warnings, citations, confidence, explanation |
 
-Module 1 agents imported services directly. That does not scale to Recruitment, Onboarding, or real HR/email APIs.
+Memory must never override policy violations, missing prerequisites, insufficient leave balance, attendance/performance/training/offboarding rules, or authorization restrictions.
 
-The tool layer gives every workflow the same contract: typed inputs, authorization, retries, and an execution trace. Future Calendar, Email, or HRIS adapters register as tools with the same capabilities; agents do not change.
+## Registered workflow types
 
-## Tool registry, selector, and executor
+| `workflow_type` | Purpose |
+|-----------------|--------|
+| `leave_attendance` | Leave request evaluation (balances + leave policy). Name is historical; **not** the attendance analytics workflow. |
+| `recruitment` | Job/candidate scoring, shortlist/interview with approval |
+| `onboarding` | Documents, tasks, equipment, system access (privileged access approval) |
+| `attendance` | Attendance analytics, irregularities, warnings/escalations |
+| `performance` | Goals/KPIs, reviews, improvement plans |
+| `training` | Skill gaps, catalog match, enrollment (high-cost approval) |
+| `offboarding` | Exit checklist, assets, handover, access revoke (privileged approval) |
+| `hr_services` | Coordination/service layer: certificates, tickets, inquiries, routing — **not** a replacement for domain workflows |
 
-- **Registry** (`app/tools/registry.py`): explicit registration. Unknown names fail closed.
-- **Selector** (`app/tools/selector.py`): deterministic. An agent may only use `allowed_agents`. Write tools require the Action Agent and `validated=True`. No LLM tool-picking.
-- **Executor** (`app/tools/executor.py`): Pydantic input validation, authorization, tenacity retries for transient `SERVICE_ERROR` only, duration/attempt tracing, notification log fallback. ToolContext now carries optional `organization_id` / `user_id` / `user_role` from WorkflowState into every execution and audit trace.
-- **Service boundary** (`app/services/interfaces.py`): tools depend on `HREmployeeService` and `NotificationServicePort`. The current in-memory store and inbox are implementations; PostgreSQL/email adapters can replace them later without changing agents or ToolExecutor.
-- **Idempotency** (`app/tools/idempotency.py`): reusable write keys include organization + workflow + capability so retries cannot double-apply leave updates or notifications.
-- **Planned domains** (`app/tools/domains.py`): documented recruitment/onboarding/attendance/performance/training/offboarding capabilities for future registration. Not implemented yet.
+Informational phrasing such as `leave balance inquiry` / `attendance inquiry` routes to `hr_services`. Actionable domain phrasing (e.g. “take 3 days of leave”, “analyze attendance”, “recommend training”) routes to the matching domain workflow.
 
-## Seven leave tools
+## Agent architecture
 
-| Tool | Capability | Side effect | Agent |
-|------|------------|-------------|-------|
-| `get_employee` | `employee.lookup` | read | research |
-| `get_leave_balance` | `employee.leave_balance` | read | research, analysis |
-| `get_leave_policy` | `policy.lookup` | read | policy |
-| `validate_leave_policy` | `policy.validate_leave` | read | policy |
-| `calculate_leave_impact` | `leave.impact` | read | analysis |
-| `update_leave_balance` | `leave.balance.update` | write | action |
-| `notify_employee` | `notification.send` | write | action |
+Each workflow is a LangGraph `StateGraph(WorkflowState)` of specialized nodes (planner/research/policy/analysis/decision/validation/action/response, with domain naming). Validation branches to action only when the decision is executable and not awaiting human approval.
 
-`update_leave_balance` is idempotent per `workflow_id` + employee + leave request, so retries cannot double-deduct. If notification still fails after retries, the executor records a log-only fallback and does not undo the leave update.
+Agents request capabilities; they do not call stores or SMTP directly.
 
-## Simulated HR store
+## Tool architecture
 
-JSON under `data/` is seed data only. `app/services/hr_store.py` loads it into memory. Workflow updates change the in-memory store. JSON files are never written. Tests call `reset_hr_store()` between runs.
+- **Registry** (`app/tools/registry.py`): fail-closed name/capability lookup
+- **Selector** (`app/tools/selector.py`): agent allowlist + write guards (`validated=True`)
+- **Executor** (`app/tools/executor.py`): schema validation, authorization, retries for transient `SERVICE_ERROR`, redacted traces
+- **Idempotency** (`app/tools/idempotency.py`): org + workflow + capability keys so retries do not double-apply writes
+- **Implementations**: leave, recruitment, onboarding, attendance, performance, training, offboarding, hr_services, notifications — all against in-memory simulated stores
 
-## Monitoring, validation, and errors
+## Memory architecture
 
-Each tool call appends a `tool_executions` record to `WorkflowState` (tool, agent, success, attempts, duration, error code, redacted input). The CLI prints this trace.
+Agents use `app.memory.facade` only:
 
-Validation is two-layered: tool input schemas plus the existing Validation Agent, which also checks that approve-path pending actions are registered write tools.
+| Layer | Scope |
+|-------|--------|
+| Short-term | `organization_id` + `workflow_id` notebook (cleared between runs) |
+| Knowledge | Lexical search over `data/knowledge/` via `KnowledgeStore` (global + matching org) |
+| Long-term | Compact outcomes scoped by `organization_id` + `employee_id` + `workflow_type` (JSONL development backend) |
 
-Error codes: `NOT_FOUND`, `INVALID_INPUT`, `SERVICE_ERROR`, `FORBIDDEN`. Invalid input, forbidden access, and missing records are not retried.
+Every access appends a redacted record to `WorkflowState.memory_accesses`.
 
-## Internship Module 2 mapping
+## Knowledge architecture
 
-| Requirement | Implementation |
-|-------------|----------------|
-| Tool integration | Seven tools + catalog |
-| APIs / external systems | Service adapters behind tools (simulated now) |
-| Intelligent tool selection | Capability/allowlist selector |
-| Action execution | Action Agent + write tools |
-| Monitoring | `tool_executions` + CLI |
-| Validation and error handling | Schemas, write guards, typed errors |
-| Retry / fallback | tenacity + notification log fallback |
+Offline markdown handbooks under `data/knowledge/{domain}/` plus optional `organizations/{organization_id}/`. Search never overrides structured `data/policies/*.json`.
 
-## Module 3 — Memory
+## Decision engine
 
-Memory exists so agents can share a run notebook, retrieve handbook explanations, and recall compact prior outcomes. It does **not** replace `WorkflowState`, tools, or the structured leave policy. Structured rules/tools remain authoritative for balance checks, policy violations, validation, and authorization.
+Per-domain decision agents produce a shared `WorkflowDecision` shape (`approve` / `reject` / `pending_approval` / `escalate` / `recommend` / `ready` / `blocked`, plus evidence/blockers/warnings). Validation agents gate write tools and set `metadata.route`.
 
-- **WorkflowState:** current request, employee data, policy/analysis/decision, tool traces, `memory_accesses`. Live coordination contract.
-- **Short-term memory:** in-process notes scoped to `organization_id + workflow_id`. Cleared between runs. Not a chatbot history.
-- **Knowledge memory:** offline lexical search over `data/knowledge/` (global/domain folders today; future `organizations/{organization_id}/...`). `KnowledgeStore.search(query, organization_id, workflow_type, filters)` returns global docs plus that org only. Never overrides `leave_policy.json`.
-- **Long-term memory:** JSONL development backend (`data/memory/long_term.jsonl`, gitignored) behind `LongTermMemoryPort`. Scoped by `organization_id + employee_id + workflow_type` so the same employee id in two companies never collides. Swappable to PostgreSQL later without changing agents.
-- **Facade:** agents call `app.memory.facade` only (`MemoryAccessContext` carries org/user/role extension points). No direct JSONL, file, or vector-DB access from agents.
-- **Safety:** long-term writes keep an allowlist and reject secrets, tokens, tool payloads, notification bodies, and full employee records.
-- **Tracing:** every read/write appends a `MemoryAccess` (agent, layer, operation, memory ids, summary, org/workflow/user, timestamp, influenced_decision) without sensitive content.
+## Human approval
 
-Cross-workflow lifecycle context (recruitment → onboarding → leave → …) is supported by `workflow_type` scoping, not one unstructured employee dump.
+When outcome is `pending_approval` / `escalate` with `requires_human_approval`:
 
-| Requirement | Implementation |
-|-------------|----------------|
-| Specialized agents | Unchanged nine LangGraph nodes |
-| Communication / information exchange | State + short-term notes + memory_accesses |
-| Short-term conversational memory | Org + workflow-scoped notebook |
-| Long-term knowledge retention | Org-aware handbook retriever + JSONL outcomes |
-| Shared memory repositories | Facade over three replaceable stores |
-| Context-aware decisions | Warnings/citations/confidence only |
-| Multi-tenant isolation | organization_id on records + knowledge visibility |
+1. Validation routes to response (no high-impact writes)
+2. Engine stores an **in-memory** checkpoint and returns `WorkflowResult` with `approval_checkpoint`
+3. `WorkflowEngine.resume(workflow_id, ApprovalDecision(approved=True|False))` executes or rejects pending writes
+
+There is no approval UI yet (Module 5). Checkpoints are process-local and lost on restart.
+
+## Audit and metrics
+
+Built once in `app/workflows/results.py` for every workflow (not per-domain builders):
+
+- **Audit:** workflow id/type/org, timing, status, agents, tool executions, memory accesses, decision, actions, errors, approval checkpoint, final outcome
+- **Metrics:** duration, agent/tool counts, success/retry rates, validation_failed, human_approval_required, confidence, action_success_rate, escalated, status
+
+Returned inside the shared `WorkflowResult`.
 
 ## Setup
 
@@ -164,18 +129,6 @@ cd /home/vinay/Documents/Code/enterprise-workflow-decision-automation
 python3.12 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
-```
-
-If `.venv` already exists:
-
-```bash
-source .venv/bin/activate
-pip install -r requirements.txt
-```
-
-## Configuration
-
-```bash
 cp .env.example .env
 ```
 
@@ -185,45 +138,70 @@ GEMINI_MODEL=
 APP_ENV=development
 ```
 
-Do not commit a real API key. Module 1 and Module 2 do not require Gemini. Default model in settings is `gemini-2.5-flash`.
+Default model is `gemini-2.5-flash`. Modules 1–4 do not require Gemini for the deterministic agent paths used in tests and CLI demos.
 
-## Run the leave workflow
+## CLI examples
 
 ```bash
-python run.py
-python run.py "Check whether employee E001 can take 3 days of leave from 2026-08-17."
-python run.py "Check whether employee E002 can take 3 days of leave from 2026-08-17."
-python run.py "Check whether employee E001 can take 8 days of leave from 2026-08-17."
+source .venv/bin/activate
+
+# Leave
+python run.py "Check whether employee E001 can take 3 days of leave."
+
+# Recruitment
+python run.py "Find candidates for the Python Backend Developer position."
+
+# Onboarding
+python run.py "Start onboarding for employee E003."
+
+# Attendance
+python run.py "Analyze attendance for employee E003 for July 2026."
+
+# Performance
+python run.py "Analyze performance for employee E003 for Q2 2026."
+
+# Training
+python run.py "Recommend training for employee E003."
+
+# Offboarding
+python run.py "Start offboarding for employee E006."
+
+# HR Services
+python run.py "Request an employment certificate for employee E003."
+
+# Explicit override / tenant context
+python run.py "Please process this case." --workflow-type hr_services --organization-id org-demo --user-id E003 --user-role employee
 ```
 
-| ID | Name | Annual balance | Status | Typical result for 3 days |
-|----|------|----------------|--------|---------------------------|
-| E001 | Alex Rivera | 12 | active | approved (under 5-day approval threshold) |
-| E002 | Jordan Chen | 2 | active | rejected (insufficient balance) |
-| E003 | Sam Patel | 10 | inactive | rejected |
-| E001 with 8 days | Alex Rivera | 12 | active | pending human approval |
+`run.py` is a thin `WorkflowEngine` client. It prints state, tools, memory, decision, actions, audit, and metrics.
 
-## Run tests
+## Tests
 
 ```bash
 source .venv/bin/activate
 python -m pytest tests -q
 ```
 
-Tests are deterministic and do not call Gemini.
+Tests are deterministic and do not call Gemini. Platform evaluation coverage lives in `tests/test_module4_platform_eval.py` plus per-domain suites. Current suite: **280** tests passing.
+
+## Simulated components (explicit)
+
+- In-memory HR / recruitment / onboarding / attendance / performance / training / offboarding / HR services stores (JSON under `data/` is seed only; not written back)
+- In-memory notification inbox with fault injection
+- In-memory human-approval checkpoints
+- Lexical (non-vector) knowledge search
+- Deterministic agents (no live LLM required for current paths)
 
 ## Current limitations
 
-- Only the Leave & Attendance workflow is implemented.
-- Agent nodes are deterministic; they do not call the LLM yet.
-- HR and notification systems are simulated in memory.
-- JSON seed files are not updated on disk (by design).
-- There is no dashboard, REST API, PostgreSQL, RAG, or cloud deployment yet.
-- Human approval is detected and reported; there is no approval UI.
-- Tool selection is policy-based, not LLM-based.
-- Knowledge search is lexical and offline, not a production vector database.
+- No frontend, dashboard, authentication, REST API, PostgreSQL, Docker, or cloud deployment (Module 5)
+- No real email or external HRIS integrations
+- Human approval has no UI; resume is programmatic via `WorkflowEngine.resume`
+- Approval checkpoints are not durable across process restarts
+- Empty `organization_id` on many seed records matches any tenant filter (demo convenience; document as evaluation constraint)
+- Agent nodes are deterministic; LLM enrichment is optional/future
+- `leave_attendance` expects actionable leave requests; pure balance questions are better as `leave balance inquiry` → `hr_services`
 
-## Planned modules
+## Module 5 (not started)
 
-- **Module 4:** Workflow platform spine (4A done: registry/router/engine). Remaining phases add recruitment, onboarding, attendance, performance, training, offboarding, and employee services on the same engine.
-- **Module 5:** REST APIs, web dashboard, monitoring, logging, deployment, and performance work.
+REST APIs, web dashboard, monitoring/logging, durable persistence, authentication, and deployment belong to Module 5. Do not start them in this repository phase.
