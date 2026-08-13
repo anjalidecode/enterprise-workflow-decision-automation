@@ -91,6 +91,25 @@ AGENT_MEMORY_PERMISSIONS: dict[str, dict[MemoryLayer, set[str]]] = {
         "knowledge": {"read"},
         "long_term": {"write"},
     },
+    # Attendance-specialized agents
+    "attendance_planner": {"short_term": {"write"}},
+    "attendance_research": {"short_term": {"write"}},
+    "attendance_analysis": {
+        "short_term": {"write"},
+        "knowledge": {"read"},
+    },
+    "attendance_policy": {"short_term": {"write"}, "knowledge": {"read"}},
+    "attendance_decision": {
+        "short_term": {"read", "write"},
+        "long_term": {"read"},
+    },
+    "attendance_validation": {"short_term": {"read"}},
+    "attendance_action": {"short_term": {"write"}},
+    "attendance_response": {
+        "short_term": {"read"},
+        "knowledge": {"read"},
+        "long_term": {"write"},
+    },
 }
 
 # Extension points for future role-aware retrieval. Not enforced as full RBAC yet.

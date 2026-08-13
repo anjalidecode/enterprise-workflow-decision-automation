@@ -34,7 +34,7 @@ WORKFLOW_TYPE_BY_FOLDER = {
     "onboarding": "onboarding",
     "performance": "performance",
     "offboarding": "offboarding",
-    "attendance": "leave_attendance",
+    "attendance": "attendance",
     "training": "training",
 }
 

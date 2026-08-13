@@ -15,6 +15,7 @@ WorkflowType = Literal[
     "leave_attendance",
     "recruitment",
     "onboarding",
+    "attendance",
     "performance",
     "offboarding",
     "unsupported",

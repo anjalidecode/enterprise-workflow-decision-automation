@@ -4,6 +4,11 @@ from __future__ import annotations
 
 from typing import Any
 
+from app.workflows.attendance_workflow import (
+    ATTENDANCE_AGENT_NODES,
+    build_attendance_workflow,
+    run_attendance_workflow,
+)
 from app.workflows.contracts import WorkflowSpec
 from app.workflows.leave_workflow import (
     AGENT_NODES,
@@ -161,6 +166,55 @@ ONBOARDING_WORKFLOW_SPEC = WorkflowSpec(
     version="1.0",
 )
 
+ATTENDANCE_WORKFLOW_SPEC = WorkflowSpec(
+    workflow_type="attendance",
+    name="Attendance Decision & Automation",
+    description=(
+        "Analyze employee attendance records against structured attendance policy, "
+        "detect irregularities, warnings, and escalations, and create review/"
+        "notification actions with human approval for serious issues."
+    ),
+    supported_request_hints=[
+        "attendance",
+        "absent",
+        "absence",
+        "late",
+        "lateness",
+        "attendance record",
+        "attendance report",
+        "attendance issue",
+        "present days",
+    ],
+    required_agents=list(ATTENDANCE_AGENT_NODES),
+    required_tool_capabilities=[
+        "employee.lookup",
+        "attendance.records.get",
+        "attendance.summary.calculate",
+        "attendance.policy.lookup",
+        "attendance.policy.validate",
+        "attendance.issues.find",
+        "attendance.review.create",
+        "attendance.warning.send",
+        "attendance.status.update",
+        "notification.send",
+    ],
+    memory_profile={
+        "short_term": True,
+        "knowledge": True,
+        "long_term": True,
+        "knowledge_workflow_type": "attendance",
+    },
+    entry_node="attendance_planner",
+    terminal_statuses=[
+        "completed",
+        "awaiting_human_approval",
+        "validation_failed",
+        "failed",
+    ],
+    approval_outcomes=["pending_approval", "escalate"],
+    version="1.0",
+)
+
 
 def _leave_runner(
     user_request: str,
@@ -240,8 +294,34 @@ def _onboarding_runner(
     )
 
 
+def _attendance_runner(
+    user_request: str,
+    *,
+    reset_runtime: bool = True,
+    organization_id: str = "",
+    user_id: str = "",
+    initiated_by: str = "",
+    user_role: str = "",
+    request_id: str | None = None,
+    entities: dict[str, Any] | None = None,
+    workflow_type: str = "attendance",
+    **_: Any,
+):
+    return run_attendance_workflow(
+        user_request,
+        reset_runtime=reset_runtime,
+        organization_id=organization_id,
+        user_id=user_id,
+        initiated_by=initiated_by,
+        user_role=user_role,
+        request_id=request_id,
+        entities=entities,
+        workflow_type=workflow_type,
+    )
+
+
 def register_builtin_workflows(registry: WorkflowRegistry) -> None:
-    """Register leave, recruitment, and onboarding workflows."""
+    """Register leave, recruitment, onboarding, and attendance workflows."""
 
     registry.register(
         LEAVE_WORKFLOW_SPEC,
@@ -259,5 +339,11 @@ def register_builtin_workflows(registry: WorkflowRegistry) -> None:
         ONBOARDING_WORKFLOW_SPEC,
         runner=_onboarding_runner,
         graph_factory=build_onboarding_workflow,
+        validate_tools=True,
+    )
+    registry.register(
+        ATTENDANCE_WORKFLOW_SPEC,
+        runner=_attendance_runner,
+        graph_factory=build_attendance_workflow,
         validate_tools=True,
     )

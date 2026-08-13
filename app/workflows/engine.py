@@ -8,6 +8,9 @@ from typing import Any
 
 from app.agents.action import action_agent
 from app.agents.response import response_agent
+from app.agents.attendance.action import attendance_action_agent
+from app.agents.attendance.decision import build_attendance_pending_actions
+from app.agents.attendance.response import attendance_response_agent
 from app.agents.onboarding.action import onboarding_action_agent
 from app.agents.onboarding.response import onboarding_response_agent
 from app.agents.recruitment.action import recruitment_action_agent
@@ -124,6 +127,31 @@ def _pending_actions_after_approval(working: WorkflowState, decision: dict[str, 
             employee_id=employee_id,
             analysis=analysis,
             include_privileged=True,
+        )
+
+    if workflow_type == "attendance":
+        employee_id = str(
+            (decision.get("entity_refs") or {}).get("employee_id")
+            or (working.get("entities") or {}).get("employee_id")
+            or (working.get("employee_data") or {}).get("employee_id")
+            or ""
+        )
+        manager_id = (
+            (decision.get("entity_refs") or {}).get("manager_id")
+            or (working.get("employee_data") or {}).get("manager")
+        )
+        severity = str(
+            (decision.get("entity_refs") or {}).get("severity")
+            or (working.get("metadata") or {}).get("attendance_severity")
+            or "escalation"
+        )
+        rationale = str(decision.get("rationale") or "Attendance review after human approval.")
+        return build_attendance_pending_actions(
+            employee_id=employee_id,
+            manager_id=str(manager_id) if manager_id else None,
+            severity=severity if severity in {"warning", "escalation"} else "escalation",
+            rationale=rationale,
+            include_manager_notify=True,
         )
 
     # Default: leave-compatible write actions
@@ -397,6 +425,9 @@ class WorkflowEngine:
         elif str(working.get("workflow_type") or "") == "onboarding":
             working = _apply_node_patch(working, onboarding_action_agent(working))
             working = _apply_node_patch(working, onboarding_response_agent(working))
+        elif str(working.get("workflow_type") or "") == "attendance":
+            working = _apply_node_patch(working, attendance_action_agent(working))
+            working = _apply_node_patch(working, attendance_response_agent(working))
         else:
             working = _apply_node_patch(working, action_agent(working))
             working = _apply_node_patch(working, response_agent(working))

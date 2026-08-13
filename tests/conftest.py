@@ -4,6 +4,7 @@ import sys
 import pytest
 
 from app.memory.facade import reset_memory
+from app.services.attendance_store import reset_attendance_store
 from app.services.hr_store import reset_hr_store
 from app.services.notifications import reset_notification_service
 from app.services.onboarding_store import reset_onboarding_store
@@ -21,6 +22,7 @@ def reset_simulated_runtime() -> None:
     reset_hr_store()
     reset_recruitment_store()
     reset_onboarding_store()
+    reset_attendance_store()
     reset_notification_service()
     reset_registry()
     reset_memory()
@@ -29,6 +31,7 @@ def reset_simulated_runtime() -> None:
     reset_hr_store()
     reset_recruitment_store()
     reset_onboarding_store()
+    reset_attendance_store()
     reset_notification_service()
     reset_memory()
     reset_workflow_engine()

@@ -71,6 +71,18 @@ class SimulatedHRStore:
             return None
         return copy.deepcopy(employee)
 
+    def list_employees(self, *, organization_id: str = "") -> list[dict[str, Any]]:
+        """Return employee directory copies, optionally filtered by organization."""
+
+        self._maybe_fault("list_employees")
+        results: list[dict[str, Any]] = []
+        for employee in self._employees.values():
+            if not _org_matches(employee, organization_id):
+                continue
+            results.append(copy.deepcopy(employee))
+        results.sort(key=lambda item: str(item.get("employee_id") or ""))
+        return results
+
     def get_leave_balance(
         self,
         employee_id: str,

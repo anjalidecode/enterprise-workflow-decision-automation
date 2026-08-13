@@ -6,6 +6,16 @@ ToolExecutor.
 
 from __future__ import annotations
 
+from app.tools.implementations.attendance import (
+    CalculateAttendanceSummaryTool,
+    CreateAttendanceReviewTool,
+    FindAttendanceIssuesTool,
+    GetAttendancePolicyTool,
+    GetAttendanceRecordsTool,
+    SendAttendanceWarningTool,
+    UpdateAttendanceStatusTool,
+    ValidateAttendancePolicyTool,
+)
 from app.tools.implementations.employee import GetEmployeeTool, GetLeaveBalanceTool
 from app.tools.implementations.leave import CalculateLeaveImpactTool, UpdateLeaveBalanceTool
 from app.tools.implementations.notification import NotifyEmployeeTool
@@ -39,7 +49,7 @@ _REGISTRY: ToolRegistry | None = None
 
 
 def build_registry() -> ToolRegistry:
-    """Create a registry with leave, recruitment, and onboarding tools."""
+    """Create a registry with leave, recruitment, onboarding, and attendance tools."""
 
     registry = ToolRegistry()
     registry.register(GetEmployeeTool())
@@ -68,6 +78,14 @@ def build_registry() -> ToolRegistry:
     registry.register(RequestEquipmentTool())
     registry.register(RequestSystemAccessTool())
     registry.register(UpdateOnboardingStatusTool())
+    registry.register(GetAttendanceRecordsTool())
+    registry.register(CalculateAttendanceSummaryTool())
+    registry.register(GetAttendancePolicyTool())
+    registry.register(ValidateAttendancePolicyTool())
+    registry.register(FindAttendanceIssuesTool())
+    registry.register(CreateAttendanceReviewTool())
+    registry.register(SendAttendanceWarningTool())
+    registry.register(UpdateAttendanceStatusTool())
     return registry
 
 

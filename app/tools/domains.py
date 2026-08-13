@@ -1,8 +1,8 @@
 """Planned HR tool domains and capabilities.
 
 These entries document how future workflows will register tools without changing
-the ToolExecutor. Recruitment and onboarding tools are implemented; remaining
-domains (attendance, performance, training, offboarding) are documentation-only.
+the ToolExecutor. Recruitment, onboarding, and attendance tools are implemented;
+remaining domains (performance, training, offboarding) are documentation-only.
 """
 
 from __future__ import annotations
@@ -31,9 +31,14 @@ PLANNED_TOOL_CAPABILITIES: list[PlannedCapability] = [
     {"category": "onboarding", "capability": "equipment.request", "name": "request_equipment_kit", "side_effect": "write"},
     {"category": "onboarding", "capability": "access.request", "name": "request_access_bundle", "side_effect": "write"},
     # Attendance
-    {"category": "attendance", "capability": "attendance.lookup", "name": "get_attendance", "side_effect": "read"},
-    {"category": "attendance", "capability": "absence.calculate", "name": "calculate_absence", "side_effect": "read"},
-    {"category": "attendance", "capability": "attendance.pattern", "name": "detect_attendance_pattern", "side_effect": "read"},
+    {"category": "attendance", "capability": "attendance.records.get", "name": "get_attendance_records", "side_effect": "read"},
+    {"category": "attendance", "capability": "attendance.summary.calculate", "name": "calculate_attendance_summary", "side_effect": "read"},
+    {"category": "attendance", "capability": "attendance.policy.lookup", "name": "get_attendance_policy", "side_effect": "read"},
+    {"category": "attendance", "capability": "attendance.policy.validate", "name": "validate_attendance_policy", "side_effect": "read"},
+    {"category": "attendance", "capability": "attendance.issues.find", "name": "find_attendance_issues", "side_effect": "read"},
+    {"category": "attendance", "capability": "attendance.review.create", "name": "create_attendance_review", "side_effect": "write"},
+    {"category": "attendance", "capability": "attendance.warning.send", "name": "send_attendance_warning", "side_effect": "write"},
+    {"category": "attendance", "capability": "attendance.status.update", "name": "update_attendance_status", "side_effect": "write"},
     # Performance
     {"category": "performance", "capability": "performance.lookup", "name": "get_performance", "side_effect": "read"},
     {"category": "performance", "capability": "goals.lookup", "name": "get_goals", "side_effect": "read"},

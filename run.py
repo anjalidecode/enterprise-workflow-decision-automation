@@ -150,6 +150,19 @@ def main() -> None:
         print(f"  Invalid docs:      {analysis.get('invalid_documents') or []}")
         print(f"  Privileged access: {analysis.get('privileged_access_required') or []}")
         print(f"  Recommendation:    {analysis.get('recommendation', 'n/a')}")
+    elif result.get("workflow_type") == "attendance":
+        summary = analysis.get("summary") or {}
+        print(f"  Employee:          {employee.get('name', 'n/a')} ({employee.get('employee_id', 'n/a')})")
+        print(f"  Department:        {employee.get('department', analysis.get('department', 'n/a'))}")
+        print(f"  Period:            {analysis.get('start_date', 'n/a')} to {analysis.get('end_date', 'n/a')}")
+        print(f"  Present days:      {summary.get('present_days', 'n/a')}")
+        print(f"  Absent days:       {summary.get('absent_days', 'n/a')}")
+        print(f"  Late arrivals:     {summary.get('late_arrivals', 'n/a')}")
+        print(f"  Attendance %:      {summary.get('attendance_percentage', 'n/a')}")
+        print(f"  Policy:            {policy.get('policy_id', 'n/a')} severity={policy.get('severity')}")
+        print(f"  Violations:        {policy.get('violations') or []}")
+        print(f"  Warnings:          {policy.get('warnings') or []}")
+        print(f"  Issue findings:    {len(analysis.get('issue_findings') or [])}")
     else:
         print(f"  Employee:          {employee.get('name', 'n/a')} ({employee.get('employee_id', 'n/a')})")
         print(
