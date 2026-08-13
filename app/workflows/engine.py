@@ -8,6 +8,8 @@ from typing import Any
 
 from app.agents.action import action_agent
 from app.agents.response import response_agent
+from app.agents.onboarding.action import onboarding_action_agent
+from app.agents.onboarding.response import onboarding_response_agent
 from app.agents.recruitment.action import recruitment_action_agent
 from app.agents.recruitment.response import recruitment_response_agent
 from app.memory.facade import reset_short_term_memory
@@ -107,6 +109,22 @@ def _pending_actions_after_approval(working: WorkflowState, decision: dict[str, 
                 }
             )
         return actions
+
+    if workflow_type == "onboarding":
+        from app.agents.onboarding.decision import build_onboarding_pending_actions
+
+        analysis = working.get("analysis_results") or {}
+        employee_id = str(
+            (decision.get("entity_refs") or {}).get("employee_id")
+            or (working.get("entities") or {}).get("employee_id")
+            or (working.get("employee_data") or {}).get("employee_id")
+            or ""
+        )
+        return build_onboarding_pending_actions(
+            employee_id=employee_id,
+            analysis=analysis,
+            include_privileged=True,
+        )
 
     # Default: leave-compatible write actions
     leave_request = dict(metadata.get("leave_request") or {})
@@ -376,6 +394,9 @@ class WorkflowEngine:
         if str(working.get("workflow_type") or "") == "recruitment":
             working = _apply_node_patch(working, recruitment_action_agent(working))
             working = _apply_node_patch(working, recruitment_response_agent(working))
+        elif str(working.get("workflow_type") or "") == "onboarding":
+            working = _apply_node_patch(working, onboarding_action_agent(working))
+            working = _apply_node_patch(working, onboarding_response_agent(working))
         else:
             working = _apply_node_patch(working, action_agent(working))
             working = _apply_node_patch(working, response_agent(working))

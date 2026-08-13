@@ -12,13 +12,15 @@ DecisionOutcome = Literal[
     "pending_approval",
     "escalate",
     "recommend",
+    "ready",
+    "blocked",
 ]
 
 # Outcomes that pause the workflow for a human before write actions run.
 HUMAN_APPROVAL_OUTCOMES = frozenset({"pending_approval", "escalate"})
 
 # Outcomes that may execute write tools after validation.
-EXECUTABLE_OUTCOMES = frozenset({"approve"})
+EXECUTABLE_OUTCOMES = frozenset({"approve", "ready"})
 
 
 class WorkflowDecision(BaseModel):

@@ -22,6 +22,8 @@ class GetEmployeeOutput(BaseModel):
     department: str | None = None
     manager: str | None = None
     employment_status: str
+    role: str | None = None
+    joining_date: str | None = None
     leave_balances: dict[str, int]
     source: str = "simulated_hr_store"
 
@@ -45,7 +47,7 @@ class GetEmployeeTool(BaseTool):
         category="employee",
         capability="employee.lookup",
         side_effect="read",
-        allowed_agents=["research"],
+        allowed_agents=["research", "employee_research"],
         retryable=True,
         max_retries=2,
     )
@@ -69,6 +71,8 @@ class GetEmployeeTool(BaseTool):
             department=employee.get("department"),
             manager=employee.get("manager"),
             employment_status=str(employee.get("employment_status", "")),
+            role=employee.get("role"),
+            joining_date=employee.get("joining_date"),
             leave_balances=dict(employee.get("leave_balances") or {}),
         )
         return output.model_dump()

@@ -9,6 +9,17 @@ from __future__ import annotations
 from app.tools.implementations.employee import GetEmployeeTool, GetLeaveBalanceTool
 from app.tools.implementations.leave import CalculateLeaveImpactTool, UpdateLeaveBalanceTool
 from app.tools.implementations.notification import NotifyEmployeeTool
+from app.tools.implementations.onboarding import (
+    CreateOnboardingTaskTool,
+    GetEmployeeDocumentsTool,
+    GetOnboardingPolicyTool,
+    ListOnboardingTasksTool,
+    RequestEquipmentTool,
+    RequestSystemAccessTool,
+    UpdateOnboardingStatusTool,
+    ValidateOnboardingPolicyTool,
+    VerifyEmployeeDocumentsTool,
+)
 from app.tools.implementations.policy import GetLeavePolicyTool, ValidateLeavePolicyTool
 from app.tools.implementations.recruitment import (
     CalculateCandidateScoreTool,
@@ -28,7 +39,7 @@ _REGISTRY: ToolRegistry | None = None
 
 
 def build_registry() -> ToolRegistry:
-    """Create a registry with leave and recruitment tools."""
+    """Create a registry with leave, recruitment, and onboarding tools."""
 
     registry = ToolRegistry()
     registry.register(GetEmployeeTool())
@@ -48,6 +59,15 @@ def build_registry() -> ToolRegistry:
     registry.register(ScheduleInterviewTool())
     registry.register(NotifyCandidateTool())
     registry.register(NotifyRecruiterTool())
+    registry.register(GetEmployeeDocumentsTool())
+    registry.register(VerifyEmployeeDocumentsTool())
+    registry.register(GetOnboardingPolicyTool())
+    registry.register(ValidateOnboardingPolicyTool())
+    registry.register(CreateOnboardingTaskTool())
+    registry.register(ListOnboardingTasksTool())
+    registry.register(RequestEquipmentTool())
+    registry.register(RequestSystemAccessTool())
+    registry.register(UpdateOnboardingStatusTool())
     return registry
 
 

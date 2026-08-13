@@ -48,17 +48,22 @@ def test_registry_registration_and_lookup() -> None:
     types = registry.list_workflow_types()
     assert "leave_attendance" in types
     assert "recruitment" in types
+    assert "onboarding" in types
     registered = registry.get("leave_attendance")
     assert registered.spec.name == "Leave & Attendance"
     assert registered.runner is not None
     specs = registry.list_workflows()
-    assert {item.workflow_type for item in specs} >= {"leave_attendance", "recruitment"}
+    assert {item.workflow_type for item in specs} >= {
+        "leave_attendance",
+        "recruitment",
+        "onboarding",
+    }
 
 
 def test_registry_unknown_workflow() -> None:
     registry = get_workflow_registry()
     with pytest.raises(UnknownWorkflowError):
-        registry.get("onboarding")
+        registry.get("offboarding")
 
 
 def test_router_leave_classification() -> None:

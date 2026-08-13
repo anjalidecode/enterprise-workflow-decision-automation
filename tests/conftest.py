@@ -6,6 +6,7 @@ import pytest
 from app.memory.facade import reset_memory
 from app.services.hr_store import reset_hr_store
 from app.services.notifications import reset_notification_service
+from app.services.onboarding_store import reset_onboarding_store
 from app.services.recruitment_store import reset_recruitment_store
 from app.tools.catalog import reset_registry
 from app.workflows.engine import reset_workflow_engine
@@ -19,6 +20,7 @@ if str(ROOT) not in sys.path:
 def reset_simulated_runtime() -> None:
     reset_hr_store()
     reset_recruitment_store()
+    reset_onboarding_store()
     reset_notification_service()
     reset_registry()
     reset_memory()
@@ -26,6 +28,7 @@ def reset_simulated_runtime() -> None:
     yield
     reset_hr_store()
     reset_recruitment_store()
+    reset_onboarding_store()
     reset_notification_service()
     reset_memory()
     reset_workflow_engine()

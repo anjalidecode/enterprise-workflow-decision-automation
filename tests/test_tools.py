@@ -69,14 +69,16 @@ def test_registry_unknown_tool_fails_closed() -> None:
 
 def test_planned_domains_are_documented_not_registered() -> None:
     registry = build_registry()
-    # Recruitment tools are implemented; other planned domains remain documentation-only.
-    planned_onboarding = planned_capabilities_for_category("onboarding")
-    assert planned_onboarding
+    # Leave/recruitment/onboarding tools are implemented; later domains stay docs-only.
+    planned_attendance = planned_capabilities_for_category("attendance")
+    assert planned_attendance
     assert any(item["name"] == "search_candidates" for item in PLANNED_TOOL_CAPABILITIES)
-    for item in planned_onboarding:
+    for item in planned_attendance:
         assert not registry.has(item["name"])
     assert registry.has("search_candidates")
     assert registry.has("calculate_candidate_score")
+    assert registry.has("create_onboarding_task")
+    assert registry.has("request_system_access")
 
 
 def test_selector_allows_read_tool_for_research() -> None:

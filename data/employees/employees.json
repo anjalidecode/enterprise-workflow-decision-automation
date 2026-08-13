@@ -5,6 +5,8 @@
     "department": "Engineering",
     "manager": "E100",
     "employment_status": "active",
+    "role": "Senior Engineer",
+    "joining_date": "2022-03-01",
     "leave_balances": {
       "annual": 12,
       "sick": 8
@@ -16,6 +18,8 @@
     "department": "Finance",
     "manager": "E101",
     "employment_status": "active",
+    "role": "Financial Analyst",
+    "joining_date": "2023-06-15",
     "leave_balances": {
       "annual": 2,
       "sick": 5
@@ -24,9 +28,37 @@
   {
     "employee_id": "E003",
     "name": "Sam Patel",
-    "department": "Human Resources",
-    "manager": "E102",
-    "employment_status": "inactive",
+    "department": "Engineering",
+    "manager": "E100",
+    "employment_status": "active",
+    "role": "Software Engineer",
+    "joining_date": "2026-09-01",
+    "leave_balances": {
+      "annual": 10,
+      "sick": 6
+    }
+  },
+  {
+    "employee_id": "E004",
+    "name": "Riley Morgan",
+    "department": "Marketing",
+    "manager": "E103",
+    "employment_status": "active",
+    "role": "Marketing Associate",
+    "joining_date": "2026-09-08",
+    "leave_balances": {
+      "annual": 10,
+      "sick": 6
+    }
+  },
+  {
+    "employee_id": "E005",
+    "name": "Casey Quinn",
+    "department": "Engineering",
+    "manager": "E100",
+    "employment_status": "active",
+    "role": "Platform Engineer",
+    "joining_date": "2026-09-15",
     "leave_balances": {
       "annual": 10,
       "sick": 6
@@ -38,6 +70,8 @@
     "department": "Engineering",
     "manager": null,
     "employment_status": "active",
+    "role": "Engineering Manager",
+    "joining_date": "2019-01-10",
     "leave_balances": {
       "annual": 15,
       "sick": 8

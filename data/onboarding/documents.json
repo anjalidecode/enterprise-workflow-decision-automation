@@ -1,0 +1,107 @@
+[
+  {
+    "employee_id": "E003",
+    "document_type": "identity_proof",
+    "status": "submitted",
+    "verified": true,
+    "submitted_at": "2026-08-01T10:00:00+00:00"
+  },
+  {
+    "employee_id": "E003",
+    "document_type": "address_proof",
+    "status": "submitted",
+    "verified": true,
+    "submitted_at": "2026-08-01T10:05:00+00:00"
+  },
+  {
+    "employee_id": "E003",
+    "document_type": "education_certificate",
+    "status": "submitted",
+    "verified": true,
+    "submitted_at": "2026-08-01T10:10:00+00:00"
+  },
+  {
+    "employee_id": "E003",
+    "document_type": "employment_contract",
+    "status": "submitted",
+    "verified": true,
+    "submitted_at": "2026-08-02T09:00:00+00:00"
+  },
+  {
+    "employee_id": "E003",
+    "document_type": "tax_document",
+    "status": "submitted",
+    "verified": true,
+    "submitted_at": "2026-08-02T09:15:00+00:00"
+  },
+  {
+    "employee_id": "E004",
+    "document_type": "identity_proof",
+    "status": "submitted",
+    "verified": true,
+    "submitted_at": "2026-08-05T11:00:00+00:00"
+  },
+  {
+    "employee_id": "E004",
+    "document_type": "address_proof",
+    "status": "submitted",
+    "verified": true,
+    "submitted_at": "2026-08-05T11:05:00+00:00"
+  },
+  {
+    "employee_id": "E004",
+    "document_type": "education_certificate",
+    "status": "missing",
+    "verified": false,
+    "submitted_at": null
+  },
+  {
+    "employee_id": "E004",
+    "document_type": "employment_contract",
+    "status": "submitted",
+    "verified": true,
+    "submitted_at": "2026-08-05T11:20:00+00:00"
+  },
+  {
+    "employee_id": "E004",
+    "document_type": "tax_document",
+    "status": "invalid",
+    "verified": false,
+    "submitted_at": "2026-08-05T11:25:00+00:00"
+  },
+  {
+    "employee_id": "E005",
+    "document_type": "identity_proof",
+    "status": "submitted",
+    "verified": true,
+    "submitted_at": "2026-08-10T08:00:00+00:00"
+  },
+  {
+    "employee_id": "E005",
+    "document_type": "address_proof",
+    "status": "submitted",
+    "verified": true,
+    "submitted_at": "2026-08-10T08:05:00+00:00"
+  },
+  {
+    "employee_id": "E005",
+    "document_type": "education_certificate",
+    "status": "submitted",
+    "verified": true,
+    "submitted_at": "2026-08-10T08:10:00+00:00"
+  },
+  {
+    "employee_id": "E005",
+    "document_type": "employment_contract",
+    "status": "submitted",
+    "verified": true,
+    "submitted_at": "2026-08-10T08:15:00+00:00"
+  },
+  {
+    "employee_id": "E005",
+    "document_type": "tax_document",
+    "status": "submitted",
+    "verified": true,
+    "submitted_at": "2026-08-10T08:20:00+00:00"
+  }
+]

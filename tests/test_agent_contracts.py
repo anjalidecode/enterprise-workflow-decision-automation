@@ -17,16 +17,25 @@ def test_core_agent_contracts_cover_leave_graph_nodes() -> None:
 
 
 def test_workflow_decision_supports_future_outcomes() -> None:
-    for outcome in ("approve", "reject", "pending_approval", "escalate", "recommend"):
+    for outcome in (
+        "approve",
+        "reject",
+        "pending_approval",
+        "escalate",
+        "recommend",
+        "ready",
+        "blocked",
+    ):
         decision = WorkflowDecision(
             outcome=outcome,  # type: ignore[arg-type]
             rationale="test",
-            executable=outcome == "approve",
+            executable=outcome in EXECUTABLE_OUTCOMES,
             requires_human_approval=outcome in HUMAN_APPROVAL_OUTCOMES,
         )
         assert decision.outcome == outcome
 
     assert "approve" in EXECUTABLE_OUTCOMES
+    assert "ready" in EXECUTABLE_OUTCOMES
     assert "pending_approval" in HUMAN_APPROVAL_OUTCOMES
     assert "escalate" in HUMAN_APPROVAL_OUTCOMES
 

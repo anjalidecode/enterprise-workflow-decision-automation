@@ -71,6 +71,26 @@ AGENT_MEMORY_PERMISSIONS: dict[str, dict[MemoryLayer, set[str]]] = {
         "knowledge": {"read"},
         "long_term": {"write"},
     },
+    # Onboarding-specialized agents
+    "onboarding_planner": {"short_term": {"write"}},
+    "employee_research": {"short_term": {"write"}},
+    "document_verification": {"short_term": {"write"}},
+    "onboarding_policy": {"short_term": {"write"}, "knowledge": {"read"}},
+    "onboarding_analysis": {
+        "short_term": {"write"},
+        "knowledge": {"read"},
+    },
+    "onboarding_decision": {
+        "short_term": {"read", "write"},
+        "long_term": {"read"},
+    },
+    "onboarding_validation": {"short_term": {"read"}},
+    "onboarding_action": {"short_term": {"write"}},
+    "onboarding_response": {
+        "short_term": {"read"},
+        "knowledge": {"read"},
+        "long_term": {"write"},
+    },
 }
 
 # Extension points for future role-aware retrieval. Not enforced as full RBAC yet.

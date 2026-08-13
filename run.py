@@ -140,6 +140,16 @@ def main() -> None:
                 f"{item.get('candidate_id')}={item.get('score')}" for item in scores[:5]
             )
             print(f"  Top scores:        {top}")
+    elif result.get("workflow_type") == "onboarding":
+        print(f"  Employee:          {employee.get('name', 'n/a')} ({employee.get('employee_id', 'n/a')})")
+        print(f"  Role:              {employee.get('role', analysis.get('role', 'n/a'))}")
+        print(f"  Department:        {employee.get('department', analysis.get('department', 'n/a'))}")
+        print(f"  Joining date:      {employee.get('joining_date', analysis.get('joining_date', 'n/a'))}")
+        print(f"  Policy:            {policy.get('policy_id', 'n/a')} eligible={policy.get('eligible')}")
+        print(f"  Missing docs:      {analysis.get('missing_documents') or []}")
+        print(f"  Invalid docs:      {analysis.get('invalid_documents') or []}")
+        print(f"  Privileged access: {analysis.get('privileged_access_required') or []}")
+        print(f"  Recommendation:    {analysis.get('recommendation', 'n/a')}")
     else:
         print(f"  Employee:          {employee.get('name', 'n/a')} ({employee.get('employee_id', 'n/a')})")
         print(

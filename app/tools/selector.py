@@ -72,7 +72,7 @@ class ToolSelector:
                 )
 
         if tool.spec.side_effect == "write":
-            write_agents = {"action", "recruitment_action"}
+            write_agents = {"action", "recruitment_action", "onboarding_action"}
             if agent not in write_agents:
                 raise ToolForbiddenError(
                     f"Write tool '{tool.spec.name}' can only be selected by an Action agent."

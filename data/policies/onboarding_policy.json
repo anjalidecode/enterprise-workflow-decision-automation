@@ -1,0 +1,43 @@
+{
+  "policy_id": "HR-ONBOARD-001",
+  "name": "Employee Onboarding Policy",
+  "version": "1.0",
+  "mandatory_documents": [
+    "identity_proof",
+    "address_proof",
+    "education_certificate",
+    "employment_contract",
+    "tax_document"
+  ],
+  "mandatory_tasks": [
+    "hr_orientation",
+    "manager_intro",
+    "policy_ack",
+    "workspace_setup"
+  ],
+  "standard_equipment": [
+    "laptop",
+    "monitor",
+    "headset"
+  ],
+  "standard_system_access": [
+    "email",
+    "gitlab",
+    "slack"
+  ],
+  "privileged_access": [
+    "production_admin",
+    "secrets_vault",
+    "payroll_admin"
+  ],
+  "rules": {
+    "employee_must_be_active": true,
+    "manager_required": true,
+    "joining_date_required": true,
+    "all_mandatory_documents_verified": true,
+    "privileged_access_requires_human_approval": true,
+    "create_tasks_before_notify": true,
+    "hr_approval_role": "hr_admin",
+    "manager_approval_role": "manager"
+  }
+}

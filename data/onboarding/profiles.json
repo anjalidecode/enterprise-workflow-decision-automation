@@ -1,0 +1,26 @@
+[
+  {
+    "employee_id": "E003",
+    "onboarding_track": "standard_engineering",
+    "equipment_required": ["laptop", "monitor", "headset"],
+    "access_required": ["email", "gitlab", "slack"],
+    "privileged_access_required": [],
+    "organization_id": ""
+  },
+  {
+    "employee_id": "E004",
+    "onboarding_track": "standard_marketing",
+    "equipment_required": ["laptop", "headset"],
+    "access_required": ["email", "slack", "marketing_crm"],
+    "privileged_access_required": [],
+    "organization_id": ""
+  },
+  {
+    "employee_id": "E005",
+    "onboarding_track": "platform_privileged",
+    "equipment_required": ["laptop", "monitor", "security_key"],
+    "access_required": ["email", "gitlab", "slack"],
+    "privileged_access_required": ["production_admin", "secrets_vault"],
+    "organization_id": ""
+  }
+]

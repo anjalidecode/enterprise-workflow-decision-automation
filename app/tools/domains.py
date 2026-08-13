@@ -1,7 +1,8 @@
 """Planned HR tool domains and capabilities.
 
 These entries document how future workflows will register tools without changing
-the ToolExecutor. None of these tools are implemented in Module 2.
+the ToolExecutor. Recruitment and onboarding tools are implemented; remaining
+domains (attendance, performance, training, offboarding) are documentation-only.
 """
 
 from __future__ import annotations
@@ -23,11 +24,12 @@ PLANNED_TOOL_CAPABILITIES: list[PlannedCapability] = [
     {"category": "recruitment", "capability": "candidate.lookup", "name": "get_candidate", "side_effect": "read"},
     {"category": "recruitment", "capability": "candidate.score", "name": "score_candidate", "side_effect": "read"},
     {"category": "recruitment", "capability": "interview.schedule", "name": "schedule_interview", "side_effect": "write"},
-    # Onboarding
+    # Onboarding (early planning names; implemented tools use verify_employee_documents /
+    # create_onboarding_task / request_equipment / request_system_access)
     {"category": "onboarding", "capability": "document.verify", "name": "verify_document", "side_effect": "read"},
-    {"category": "onboarding", "capability": "task.create", "name": "create_onboarding_task", "side_effect": "write"},
-    {"category": "onboarding", "capability": "equipment.request", "name": "request_equipment", "side_effect": "write"},
-    {"category": "onboarding", "capability": "access.request", "name": "request_access", "side_effect": "write"},
+    {"category": "onboarding", "capability": "task.create", "name": "create_onboarding_task_plan", "side_effect": "write"},
+    {"category": "onboarding", "capability": "equipment.request", "name": "request_equipment_kit", "side_effect": "write"},
+    {"category": "onboarding", "capability": "access.request", "name": "request_access_bundle", "side_effect": "write"},
     # Attendance
     {"category": "attendance", "capability": "attendance.lookup", "name": "get_attendance", "side_effect": "read"},
     {"category": "attendance", "capability": "absence.calculate", "name": "calculate_absence", "side_effect": "read"},

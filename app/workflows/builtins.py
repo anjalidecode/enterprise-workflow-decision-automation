@@ -10,6 +10,11 @@ from app.workflows.leave_workflow import (
     build_leave_workflow,
     run_leave_workflow,
 )
+from app.workflows.onboarding_workflow import (
+    ONBOARDING_AGENT_NODES,
+    build_onboarding_workflow,
+    run_onboarding_workflow,
+)
 from app.workflows.recruitment_workflow import (
     RECRUITMENT_AGENT_NODES,
     build_recruitment_workflow,
@@ -108,6 +113,54 @@ RECRUITMENT_WORKFLOW_SPEC = WorkflowSpec(
     version="1.0",
 )
 
+ONBOARDING_WORKFLOW_SPEC = WorkflowSpec(
+    workflow_type="onboarding",
+    name="Employee Onboarding",
+    description=(
+        "Onboard a new employee by verifying documents, applying onboarding policy, "
+        "creating tasks, requesting equipment and system access, with human approval "
+        "for privileged access."
+    ),
+    supported_request_hints=[
+        "onboarding",
+        "onboard",
+        "new employee",
+        "new hire",
+        "joining",
+        "join",
+        "start onboarding",
+    ],
+    required_agents=list(ONBOARDING_AGENT_NODES),
+    required_tool_capabilities=[
+        "employee.lookup",
+        "employee.documents",
+        "employee.document.verify",
+        "onboarding.policy.lookup",
+        "onboarding.policy.validate",
+        "onboarding.task.create",
+        "onboarding.task.list",
+        "onboarding.equipment.request",
+        "onboarding.access.request",
+        "onboarding.status.update",
+        "notification.send",
+    ],
+    memory_profile={
+        "short_term": True,
+        "knowledge": True,
+        "long_term": True,
+        "knowledge_workflow_type": "onboarding",
+    },
+    entry_node="onboarding_planner",
+    terminal_statuses=[
+        "completed",
+        "awaiting_human_approval",
+        "validation_failed",
+        "failed",
+    ],
+    approval_outcomes=["pending_approval", "escalate"],
+    version="1.0",
+)
+
 
 def _leave_runner(
     user_request: str,
@@ -161,8 +214,34 @@ def _recruitment_runner(
     )
 
 
+def _onboarding_runner(
+    user_request: str,
+    *,
+    reset_runtime: bool = True,
+    organization_id: str = "",
+    user_id: str = "",
+    initiated_by: str = "",
+    user_role: str = "",
+    request_id: str | None = None,
+    entities: dict[str, Any] | None = None,
+    workflow_type: str = "onboarding",
+    **_: Any,
+):
+    return run_onboarding_workflow(
+        user_request,
+        reset_runtime=reset_runtime,
+        organization_id=organization_id,
+        user_id=user_id,
+        initiated_by=initiated_by,
+        user_role=user_role,
+        request_id=request_id,
+        entities=entities,
+        workflow_type=workflow_type,
+    )
+
+
 def register_builtin_workflows(registry: WorkflowRegistry) -> None:
-    """Register leave and recruitment workflows."""
+    """Register leave, recruitment, and onboarding workflows."""
 
     registry.register(
         LEAVE_WORKFLOW_SPEC,
@@ -174,5 +253,11 @@ def register_builtin_workflows(registry: WorkflowRegistry) -> None:
         RECRUITMENT_WORKFLOW_SPEC,
         runner=_recruitment_runner,
         graph_factory=build_recruitment_workflow,
+        validate_tools=True,
+    )
+    registry.register(
+        ONBOARDING_WORKFLOW_SPEC,
+        runner=_onboarding_runner,
+        graph_factory=build_onboarding_workflow,
         validate_tools=True,
     )
