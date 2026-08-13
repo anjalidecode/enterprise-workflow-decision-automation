@@ -30,6 +30,11 @@ from app.workflows.recruitment_workflow import (
     build_recruitment_workflow,
     run_recruitment_workflow,
 )
+from app.workflows.training_workflow import (
+    TRAINING_AGENT_NODES,
+    build_training_workflow,
+    run_training_workflow,
+)
 from app.workflows.registry import WorkflowRegistry
 
 LEAVE_WORKFLOW_SPEC = WorkflowSpec(
@@ -271,6 +276,56 @@ PERFORMANCE_WORKFLOW_SPEC = WorkflowSpec(
     version="1.0",
 )
 
+TRAINING_WORKFLOW_SPEC = WorkflowSpec(
+    workflow_type="training",
+    name="Employee Training & Skill Development",
+    description=(
+        "Identify skill gaps, match training catalog courses, apply training "
+        "policy, and enroll employees with human approval for high-cost courses."
+    ),
+    supported_request_hints=[
+        "training",
+        "course",
+        "courses",
+        "skill gap",
+        "skill development",
+        "upskilling",
+        "reskilling",
+        "learning",
+        "training plan",
+        "recommend training",
+    ],
+    required_agents=list(TRAINING_AGENT_NODES),
+    required_tool_capabilities=[
+        "employee.lookup",
+        "training.history.get",
+        "training.catalog.search",
+        "training.course.get",
+        "training.skill_gap.calculate",
+        "training.policy.lookup",
+        "training.policy.validate",
+        "training.plan.create",
+        "training.enrollment.create",
+        "training.status.update",
+        "notification.send",
+    ],
+    memory_profile={
+        "short_term": True,
+        "knowledge": True,
+        "long_term": True,
+        "knowledge_workflow_type": "training",
+    },
+    entry_node="training_planner",
+    terminal_statuses=[
+        "completed",
+        "awaiting_human_approval",
+        "validation_failed",
+        "failed",
+    ],
+    approval_outcomes=["pending_approval", "escalate"],
+    version="1.0",
+)
+
 
 def _leave_runner(
     user_request: str,
@@ -402,8 +457,34 @@ def _performance_runner(
     )
 
 
+def _training_runner(
+    user_request: str,
+    *,
+    reset_runtime: bool = True,
+    organization_id: str = "",
+    user_id: str = "",
+    initiated_by: str = "",
+    user_role: str = "",
+    request_id: str | None = None,
+    entities: dict[str, Any] | None = None,
+    workflow_type: str = "training",
+    **_: Any,
+):
+    return run_training_workflow(
+        user_request,
+        reset_runtime=reset_runtime,
+        organization_id=organization_id,
+        user_id=user_id,
+        initiated_by=initiated_by,
+        user_role=user_role,
+        request_id=request_id,
+        entities=entities,
+        workflow_type=workflow_type,
+    )
+
+
 def register_builtin_workflows(registry: WorkflowRegistry) -> None:
-    """Register leave, recruitment, onboarding, attendance, and performance workflows."""
+    """Register leave, recruitment, onboarding, attendance, performance, and training workflows."""
 
     registry.register(
         LEAVE_WORKFLOW_SPEC,
@@ -433,5 +514,11 @@ def register_builtin_workflows(registry: WorkflowRegistry) -> None:
         PERFORMANCE_WORKFLOW_SPEC,
         runner=_performance_runner,
         graph_factory=build_performance_workflow,
+        validate_tools=True,
+    )
+    registry.register(
+        TRAINING_WORKFLOW_SPEC,
+        runner=_training_runner,
+        graph_factory=build_training_workflow,
         validate_tools=True,
     )

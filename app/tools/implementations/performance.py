@@ -83,7 +83,7 @@ class GetPerformanceRecordsTool(BaseTool):
         category="performance",
         capability="performance.records.get",
         side_effect="read",
-        allowed_agents=["performance_research", "goal_analysis"],
+        allowed_agents=["performance_research", "goal_analysis", "training_research"],
         retryable=True,
         max_retries=2,
     )

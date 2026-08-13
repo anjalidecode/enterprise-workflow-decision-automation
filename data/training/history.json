@@ -1,0 +1,62 @@
+[
+  {
+    "record_id": "TH-E003-1",
+    "employee_id": "E003",
+    "organization_id": "",
+    "course_id": "T001",
+    "title": "Python Backend Development",
+    "status": "completed",
+    "completed_at": "2026-03-15",
+    "skills_gained": ["Python", "Flask"]
+  },
+  {
+    "record_id": "TH-E003-2",
+    "employee_id": "E003",
+    "organization_id": "",
+    "course_id": "T004",
+    "title": "AWS Cloud Fundamentals",
+    "status": "withdrawn",
+    "completed_at": null,
+    "skills_gained": []
+  },
+  {
+    "record_id": "TH-E004-1",
+    "employee_id": "E004",
+    "organization_id": "",
+    "course_id": "T004",
+    "title": "AWS Cloud Fundamentals",
+    "status": "completed",
+    "completed_at": "2026-01-12",
+    "skills_gained": ["AWS", "cloud"]
+  },
+  {
+    "record_id": "TH-E005-1",
+    "employee_id": "E005",
+    "organization_id": "",
+    "course_id": "T005",
+    "title": "Docker & Containerization",
+    "status": "completed",
+    "completed_at": "2026-02-20",
+    "skills_gained": ["Docker", "containers"]
+  },
+  {
+    "record_id": "TH-E005-2",
+    "employee_id": "E005",
+    "organization_id": "",
+    "course_id": "T004",
+    "title": "AWS Cloud Fundamentals",
+    "status": "completed",
+    "completed_at": "2026-04-10",
+    "skills_gained": ["AWS", "cloud"]
+  },
+  {
+    "record_id": "TH-E001-1",
+    "employee_id": "E001",
+    "organization_id": "",
+    "course_id": "T002",
+    "title": "Advanced FastAPI & REST APIs",
+    "status": "completed",
+    "completed_at": "2025-11-01",
+    "skills_gained": ["FastAPI", "REST APIs"]
+  }
+]

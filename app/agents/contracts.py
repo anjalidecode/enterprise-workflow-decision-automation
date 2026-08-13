@@ -17,6 +17,7 @@ WorkflowType = Literal[
     "onboarding",
     "attendance",
     "performance",
+    "training",
     "offboarding",
     "unsupported",
     "",

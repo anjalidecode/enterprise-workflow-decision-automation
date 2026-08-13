@@ -1,0 +1,71 @@
+[
+  {
+    "employee_id": "E003",
+    "organization_id": "",
+    "role": "Software Engineer",
+    "skills": [
+      {"name": "Python", "level": "intermediate"},
+      {"name": "Flask", "level": "intermediate"},
+      {"name": "REST APIs", "level": "beginner"}
+    ],
+    "role_requirements": [
+      {"name": "Python", "level": "intermediate"},
+      {"name": "Flask", "level": "intermediate"},
+      {"name": "FastAPI", "level": "intermediate"},
+      {"name": "Docker", "level": "intermediate"},
+      {"name": "PostgreSQL", "level": "intermediate"}
+    ]
+  },
+  {
+    "employee_id": "E004",
+    "organization_id": "",
+    "role": "Marketing Associate",
+    "skills": [
+      {"name": "Content Writing", "level": "intermediate"},
+      {"name": "SEO", "level": "intermediate"},
+      {"name": "Social Media", "level": "beginner"}
+    ],
+    "role_requirements": [
+      {"name": "Content Writing", "level": "intermediate"},
+      {"name": "SEO", "level": "intermediate"},
+      {"name": "Digital Analytics", "level": "intermediate"},
+      {"name": "Campaign Analytics", "level": "intermediate"}
+    ]
+  },
+  {
+    "employee_id": "E005",
+    "organization_id": "",
+    "role": "Platform Engineer",
+    "skills": [
+      {"name": "Python", "level": "advanced"},
+      {"name": "Docker", "level": "intermediate"},
+      {"name": "AWS", "level": "beginner"},
+      {"name": "PostgreSQL", "level": "intermediate"}
+    ],
+    "role_requirements": [
+      {"name": "Python", "level": "advanced"},
+      {"name": "Docker", "level": "intermediate"},
+      {"name": "Kubernetes", "level": "advanced"},
+      {"name": "AWS", "level": "intermediate"}
+    ]
+  },
+  {
+    "employee_id": "E001",
+    "organization_id": "",
+    "role": "Senior Engineer",
+    "skills": [
+      {"name": "Python", "level": "advanced"},
+      {"name": "FastAPI", "level": "advanced"},
+      {"name": "Docker", "level": "advanced"},
+      {"name": "PostgreSQL", "level": "advanced"},
+      {"name": "AWS", "level": "intermediate"}
+    ],
+    "role_requirements": [
+      {"name": "Python", "level": "advanced"},
+      {"name": "FastAPI", "level": "advanced"},
+      {"name": "Docker", "level": "advanced"},
+      {"name": "PostgreSQL", "level": "advanced"},
+      {"name": "AWS", "level": "intermediate"}
+    ]
+  }
+]

@@ -179,6 +179,18 @@ def main() -> None:
         print(f"  Violations:        {policy.get('violations') or []}")
         print(f"  Warnings:          {policy.get('warnings') or []}")
         print(f"  Support findings:  {len(analysis.get('support_findings') or [])}")
+    elif result.get("workflow_type") == "training":
+        primary = analysis.get("recommended_course") or {}
+        print(f"  Employee:          {employee.get('name', 'n/a')} ({employee.get('employee_id', 'n/a')})")
+        print(f"  Department:        {employee.get('department', analysis.get('department', 'n/a'))}")
+        print(f"  Skill gaps:        {[item.get('skill') if isinstance(item, dict) else item for item in (analysis.get('skill_gaps') or [])]}")
+        print(f"  Recommended:       {primary.get('title', 'n/a')} ({primary.get('course_id', 'n/a')})")
+        print(f"  Course cost:       {primary.get('cost', 'n/a')}")
+        print(f"  Alternatives:      {[item.get('course_id') for item in (analysis.get('alternative_courses') or [])]}")
+        print(f"  Policy:            {policy.get('policy_id', 'n/a')} severity={policy.get('severity')}")
+        print(f"  Approval level:    {policy.get('approval_level', 'n/a')}")
+        print(f"  Violations:        {policy.get('violations') or []}")
+        print(f"  Warnings:          {policy.get('warnings') or []}")
     else:
         print(f"  Employee:          {employee.get('name', 'n/a')} ({employee.get('employee_id', 'n/a')})")
         print(

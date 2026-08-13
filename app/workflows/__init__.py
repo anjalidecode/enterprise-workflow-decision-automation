@@ -31,6 +31,11 @@ from app.workflows.registry import (
     reset_workflow_registry,
 )
 from app.workflows.router import WorkflowRouter
+from app.workflows.training_workflow import (
+    TRAINING_AGENT_NODES,
+    build_training_workflow,
+    run_training_workflow,
+)
 
 __all__ = [
     "AGENT_NODES",
@@ -38,6 +43,7 @@ __all__ = [
     "ONBOARDING_AGENT_NODES",
     "PERFORMANCE_AGENT_NODES",
     "RECRUITMENT_AGENT_NODES",
+    "TRAINING_AGENT_NODES",
     "WorkflowEngine",
     "WorkflowRegistry",
     "WorkflowRouter",
@@ -47,6 +53,7 @@ __all__ = [
     "build_onboarding_workflow",
     "build_performance_workflow",
     "build_recruitment_workflow",
+    "build_training_workflow",
     "get_workflow_engine",
     "get_workflow_registry",
     "reset_workflow_engine",
@@ -56,4 +63,5 @@ __all__ = [
     "run_onboarding_workflow",
     "run_performance_workflow",
     "run_recruitment_workflow",
+    "run_training_workflow",
 ]

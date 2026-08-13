@@ -130,6 +130,27 @@ AGENT_MEMORY_PERMISSIONS: dict[str, dict[MemoryLayer, set[str]]] = {
         "knowledge": {"read"},
         "long_term": {"write"},
     },
+    # Training-specialized agents
+    "training_planner": {"short_term": {"write"}},
+    "training_research": {"short_term": {"write"}},
+    "skill_gap_analysis": {"short_term": {"write"}},
+    "training_catalog_research": {"short_term": {"write"}},
+    "training_policy": {"short_term": {"write"}, "knowledge": {"read"}},
+    "training_analysis": {
+        "short_term": {"write"},
+        "knowledge": {"read"},
+    },
+    "training_decision": {
+        "short_term": {"read", "write"},
+        "long_term": {"read"},
+    },
+    "training_validation": {"short_term": {"read"}},
+    "training_action": {"short_term": {"write"}},
+    "training_response": {
+        "short_term": {"read"},
+        "knowledge": {"read"},
+        "long_term": {"write"},
+    },
 }
 
 # Extension points for future role-aware retrieval. Not enforced as full RBAC yet.

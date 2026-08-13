@@ -18,6 +18,9 @@ from app.agents.performance.decision import build_performance_pending_actions
 from app.agents.performance.response import performance_response_agent
 from app.agents.recruitment.action import recruitment_action_agent
 from app.agents.recruitment.response import recruitment_response_agent
+from app.agents.training.action import training_action_agent
+from app.agents.training.decision import build_training_pending_actions
+from app.agents.training.response import training_response_agent
 from app.memory.facade import reset_short_term_memory
 from app.orchestration.state import WorkflowState, create_initial_state
 from app.workflows.contracts import (
@@ -197,6 +200,53 @@ def _pending_actions_after_approval(working: WorkflowState, decision: dict[str, 
             review_period=review_period,
             plan_type=str(plan_type) if plan_type else "performance_improvement",
             focus_areas=focus_areas,
+            include_manager_notify=True,
+        )
+
+    if workflow_type == "training":
+        employee_id = str(
+            (decision.get("entity_refs") or {}).get("employee_id")
+            or (working.get("entities") or {}).get("employee_id")
+            or (working.get("employee_data") or {}).get("employee_id")
+            or ""
+        )
+        manager_id = (
+            (decision.get("entity_refs") or {}).get("manager_id")
+            or (working.get("employee_data") or {}).get("manager")
+        )
+        primary = dict(
+            (working.get("metadata") or {}).get("recommended_course")
+            or (working.get("analysis_results") or {}).get("recommended_course")
+            or {}
+        )
+        if not primary.get("course_id"):
+            course_id = (
+                (decision.get("entity_refs") or {}).get("course_id")
+                or (working.get("metadata") or {}).get("recommended_course_id")
+            )
+            if course_id:
+                primary = {"course_id": course_id, "title": str(course_id)}
+        alternatives = list(
+            (working.get("metadata") or {}).get("alternative_courses")
+            or (working.get("analysis_results") or {}).get("alternative_courses")
+            or []
+        )
+        skill_gaps = list(
+            (decision.get("entity_refs") or {}).get("skill_gaps")
+            or (working.get("metadata") or {}).get("skill_gaps")
+            or [
+                str(item.get("skill") or item)
+                for item in ((working.get("analysis_results") or {}).get("skill_gaps") or [])
+            ]
+        )
+        rationale = str(decision.get("rationale") or "Training enrollment after human approval.")
+        return build_training_pending_actions(
+            employee_id=employee_id,
+            manager_id=str(manager_id) if manager_id else None,
+            primary_course=primary or None,
+            alternative_courses=alternatives,
+            skill_gaps=skill_gaps,
+            rationale=rationale,
             include_manager_notify=True,
         )
 
@@ -477,6 +527,9 @@ class WorkflowEngine:
         elif str(working.get("workflow_type") or "") == "performance":
             working = _apply_node_patch(working, performance_action_agent(working))
             working = _apply_node_patch(working, performance_response_agent(working))
+        elif str(working.get("workflow_type") or "") == "training":
+            working = _apply_node_patch(working, training_action_agent(working))
+            working = _apply_node_patch(working, training_response_agent(working))
         else:
             working = _apply_node_patch(working, action_agent(working))
             working = _apply_node_patch(working, response_agent(working))

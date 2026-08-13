@@ -1,0 +1,33 @@
+{
+  "policy_id": "HR-TRAIN-001",
+  "name": "Employee Training & Skill Development Policy",
+  "version": "1.0",
+  "thresholds": {
+    "manager_approval_cost": 500,
+    "hr_approval_cost": 1500,
+    "max_concurrent_enrollments": 2,
+    "annual_training_budget": 3000,
+    "max_recommendations": 3
+  },
+  "outcomes": {
+    "ready": "ready",
+    "recommend": "recommend",
+    "blocked": "blocked",
+    "pending_approval": "pending_approval",
+    "escalate": "escalate"
+  },
+  "rules": {
+    "employee_must_be_active": true,
+    "course_must_be_active": true,
+    "prerequisites_required": true,
+    "inactive_course_blocks_enrollment": true,
+    "cost_requires_manager_approval": true,
+    "high_cost_requires_hr_approval": true,
+    "enforce_concurrent_enrollment_limit": true,
+    "enforce_annual_budget": true,
+    "mandatory_training_priority": true,
+    "no_automatic_high_impact_employment_action": true,
+    "manager_review_role": "manager",
+    "hr_review_role": "hr_admin"
+  }
+}

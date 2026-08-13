@@ -51,6 +51,7 @@ def test_registry_registration_and_lookup() -> None:
     assert "onboarding" in types
     assert "attendance" in types
     assert "performance" in types
+    assert "training" in types
     registered = registry.get("leave_attendance")
     assert registered.spec.name == "Leave & Attendance"
     assert registered.runner is not None
@@ -61,6 +62,7 @@ def test_registry_registration_and_lookup() -> None:
         "onboarding",
         "attendance",
         "performance",
+        "training",
     }
 
 

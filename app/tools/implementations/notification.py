@@ -38,7 +38,7 @@ class NotifyEmployeeTool(BaseTool):
         category="notification",
         capability="notification.send",
         side_effect="write",
-        allowed_agents=["action", "onboarding_action", "attendance_action", "performance_action"],
+        allowed_agents=["action", "onboarding_action", "attendance_action", "performance_action", "training_action"],
         idempotent=True,
         retryable=True,
         max_retries=2,

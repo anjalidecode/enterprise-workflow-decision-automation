@@ -1,8 +1,8 @@
 """Planned HR tool domains and capabilities.
 
-These entries document how future workflows will register tools without changing
-the ToolExecutor. Recruitment, onboarding, attendance, and performance tools are
-implemented; remaining domains (training, offboarding) are documentation-only.
+These entries document how workflows register tools without changing
+the ToolExecutor. Leave through training tools are implemented; remaining
+domains (offboarding) are documentation-only.
 """
 
 from __future__ import annotations
@@ -50,9 +50,15 @@ PLANNED_TOOL_CAPABILITIES: list[PlannedCapability] = [
     {"category": "performance", "capability": "performance.improvement_plan.create", "name": "create_improvement_plan", "side_effect": "write"},
     {"category": "performance", "capability": "performance.status.update", "name": "update_performance_status", "side_effect": "write"},
     # Training
-    {"category": "training", "capability": "training.search", "name": "search_training", "side_effect": "read"},
-    {"category": "training", "capability": "training.assign", "name": "assign_training", "side_effect": "write"},
-    {"category": "training", "capability": "training.track", "name": "track_training", "side_effect": "read"},
+    {"category": "training", "capability": "training.history.get", "name": "get_training_history", "side_effect": "read"},
+    {"category": "training", "capability": "training.catalog.search", "name": "search_training_catalog", "side_effect": "read"},
+    {"category": "training", "capability": "training.course.get", "name": "get_training_course", "side_effect": "read"},
+    {"category": "training", "capability": "training.skill_gap.calculate", "name": "calculate_skill_gap", "side_effect": "read"},
+    {"category": "training", "capability": "training.policy.lookup", "name": "get_training_policy", "side_effect": "read"},
+    {"category": "training", "capability": "training.policy.validate", "name": "validate_training_policy", "side_effect": "read"},
+    {"category": "training", "capability": "training.plan.create", "name": "create_training_plan", "side_effect": "write"},
+    {"category": "training", "capability": "training.enrollment.create", "name": "create_training_enrollment", "side_effect": "write"},
+    {"category": "training", "capability": "training.status.update", "name": "update_training_status", "side_effect": "write"},
     # Offboarding
     {"category": "offboarding", "capability": "resignation.lookup", "name": "get_resignation", "side_effect": "read"},
     {"category": "offboarding", "capability": "notice.validate", "name": "validate_notice_period", "side_effect": "read"},
