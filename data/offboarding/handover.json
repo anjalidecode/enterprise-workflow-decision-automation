@@ -1,0 +1,46 @@
+[
+  {
+    "handover_id": "HO-E006-1",
+    "employee_id": "E006",
+    "organization_id": "",
+    "manager": "E100",
+    "projects": ["Nova Analytics Pipeline", "Customer Insights Dashboard"],
+    "documents": ["runbook_nova.md", "insights_architecture.pdf"],
+    "knowledge_areas": ["ETL pipelines", "dashboard ownership"],
+    "handover_status": "not_started",
+    "required": true
+  },
+  {
+    "handover_id": "HO-E007-1",
+    "employee_id": "E007",
+    "organization_id": "",
+    "manager": "E101",
+    "projects": ["Budget Forecast Model"],
+    "documents": ["forecast_notes.md"],
+    "knowledge_areas": ["finance modeling"],
+    "handover_status": "not_started",
+    "required": true
+  },
+  {
+    "handover_id": "HO-E008-1",
+    "employee_id": "E008",
+    "organization_id": "",
+    "manager": "E100",
+    "projects": ["Platform Reliability Program", "Secrets Rotation Initiative"],
+    "documents": ["sre_oncall.md", "vault_procedures.md"],
+    "knowledge_areas": ["production operations", "privileged access governance"],
+    "handover_status": "not_started",
+    "required": true
+  },
+  {
+    "handover_id": "HO-E006-ORG",
+    "employee_id": "E006",
+    "organization_id": "org-isolated",
+    "manager": "E100",
+    "projects": ["Isolated Org Report"],
+    "documents": ["isolated_report.md"],
+    "knowledge_areas": ["org reporting"],
+    "handover_status": "not_started",
+    "required": false
+  }
+]

@@ -65,6 +65,48 @@
     }
   },
   {
+    "employee_id": "E006",
+    "name": "Taylor Brooks",
+    "department": "Engineering",
+    "manager": "E100",
+    "employment_status": "active",
+    "role": "Data Engineer",
+    "joining_date": "2024-02-12",
+    "notice_period_days": 30,
+    "leave_balances": {
+      "annual": 9,
+      "sick": 6
+    }
+  },
+  {
+    "employee_id": "E007",
+    "name": "Jamie Nguyen",
+    "department": "Finance",
+    "manager": "E101",
+    "employment_status": "active",
+    "role": "Finance Associate",
+    "joining_date": "2025-01-10",
+    "notice_period_days": 30,
+    "leave_balances": {
+      "annual": 8,
+      "sick": 5
+    }
+  },
+  {
+    "employee_id": "E008",
+    "name": "Avery Santos",
+    "department": "Engineering",
+    "manager": "E100",
+    "employment_status": "active",
+    "role": "Staff Platform Engineer",
+    "joining_date": "2023-05-01",
+    "notice_period_days": 30,
+    "leave_balances": {
+      "annual": 11,
+      "sick": 7
+    }
+  },
+  {
     "employee_id": "E100",
     "name": "Morgan Blake",
     "department": "Engineering",

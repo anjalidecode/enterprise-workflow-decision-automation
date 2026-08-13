@@ -191,6 +191,21 @@ def main() -> None:
         print(f"  Approval level:    {policy.get('approval_level', 'n/a')}")
         print(f"  Violations:        {policy.get('violations') or []}")
         print(f"  Warnings:          {policy.get('warnings') or []}")
+    elif result.get("workflow_type") == "offboarding":
+        print(f"  Employee:          {employee.get('name', 'n/a')} ({employee.get('employee_id', 'n/a')})")
+        print(f"  Department:        {employee.get('department', analysis.get('department', 'n/a'))}")
+        print(f"  Exit type:         {analysis.get('exit_type', retrieved.get('exit_type', 'n/a'))}")
+        print(f"  Last working day:  {analysis.get('last_working_day', retrieved.get('last_working_day', 'n/a'))}")
+        print(f"  Notice days:       {analysis.get('notice_period_days', retrieved.get('notice_period_days', 'n/a'))}")
+        print(f"  Checklist pending: {analysis.get('pending_tasks') or []}")
+        print(f"  Outstanding assets:{len(analysis.get('outstanding_assets') or [])}")
+        print(f"  Handover status:   {(analysis.get('handover') or {}).get('handover_status', 'n/a')}")
+        print(f"  Privileged access: {analysis.get('privileged_access')}")
+        print(f"  Policy:            {policy.get('policy_id', 'n/a')} severity={policy.get('severity')}")
+        print(f"  Approval level:    {policy.get('approval_level', 'n/a')}")
+        print(f"  Violations:        {policy.get('violations') or []}")
+        print(f"  Warnings:          {policy.get('warnings') or []}")
+        print(f"  Branch:            {(result.get('metadata') or {}).get('decision_branch', 'n/a')}")
     else:
         print(f"  Employee:          {employee.get('name', 'n/a')} ({employee.get('employee_id', 'n/a')})")
         print(

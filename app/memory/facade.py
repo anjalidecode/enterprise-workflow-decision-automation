@@ -151,6 +151,27 @@ AGENT_MEMORY_PERMISSIONS: dict[str, dict[MemoryLayer, set[str]]] = {
         "knowledge": {"read"},
         "long_term": {"write"},
     },
+    # Offboarding-specialized agents
+    "offboarding_planner": {"short_term": {"write"}},
+    "offboarding_employee_research": {"short_term": {"write"}},
+    "exit_details_research": {"short_term": {"write"}},
+    "checklist_analysis": {"short_term": {"write"}},
+    "offboarding_policy": {"short_term": {"write"}, "knowledge": {"read"}},
+    "offboarding_analysis": {
+        "short_term": {"write"},
+        "knowledge": {"read"},
+    },
+    "offboarding_decision": {
+        "short_term": {"read", "write"},
+        "long_term": {"read"},
+    },
+    "offboarding_validation": {"short_term": {"read"}},
+    "offboarding_action": {"short_term": {"write"}},
+    "offboarding_response": {
+        "short_term": {"read"},
+        "knowledge": {"read"},
+        "long_term": {"write"},
+    },
 }
 
 # Extension points for future role-aware retrieval. Not enforced as full RBAC yet.

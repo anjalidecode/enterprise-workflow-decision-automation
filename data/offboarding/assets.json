@@ -1,0 +1,74 @@
+[
+  {
+    "asset_id": "A-E006-01",
+    "employee_id": "E006",
+    "organization_id": "",
+    "asset_type": "laptop",
+    "assigned_date": "2024-02-12",
+    "return_status": "outstanding",
+    "condition": "good"
+  },
+  {
+    "asset_id": "A-E006-02",
+    "employee_id": "E006",
+    "organization_id": "",
+    "asset_type": "monitor",
+    "assigned_date": "2024-02-12",
+    "return_status": "outstanding",
+    "condition": "good"
+  },
+  {
+    "asset_id": "A-E006-03",
+    "employee_id": "E006",
+    "organization_id": "",
+    "asset_type": "access_card",
+    "assigned_date": "2024-02-12",
+    "return_status": "outstanding",
+    "condition": "good"
+  },
+  {
+    "asset_id": "A-E007-01",
+    "employee_id": "E007",
+    "organization_id": "",
+    "asset_type": "laptop",
+    "assigned_date": "2025-01-10",
+    "return_status": "outstanding",
+    "condition": "fair"
+  },
+  {
+    "asset_id": "A-E008-01",
+    "employee_id": "E008",
+    "organization_id": "",
+    "asset_type": "laptop",
+    "assigned_date": "2023-05-01",
+    "return_status": "outstanding",
+    "condition": "good"
+  },
+  {
+    "asset_id": "A-E008-02",
+    "employee_id": "E008",
+    "organization_id": "",
+    "asset_type": "mobile_device",
+    "assigned_date": "2023-05-01",
+    "return_status": "outstanding",
+    "condition": "good"
+  },
+  {
+    "asset_id": "A-E008-03",
+    "employee_id": "E008",
+    "organization_id": "",
+    "asset_type": "access_card",
+    "assigned_date": "2023-05-01",
+    "return_status": "outstanding",
+    "condition": "good"
+  },
+  {
+    "asset_id": "A-E006-ORG",
+    "employee_id": "E006",
+    "organization_id": "org-isolated",
+    "asset_type": "laptop",
+    "assigned_date": "2025-06-01",
+    "return_status": "outstanding",
+    "condition": "good"
+  }
+]

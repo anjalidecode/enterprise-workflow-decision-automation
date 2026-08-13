@@ -35,6 +35,11 @@ from app.workflows.training_workflow import (
     build_training_workflow,
     run_training_workflow,
 )
+from app.workflows.offboarding_workflow import (
+    OFFBOARDING_AGENT_NODES,
+    build_offboarding_workflow,
+    run_offboarding_workflow,
+)
 from app.workflows.registry import WorkflowRegistry
 
 LEAVE_WORKFLOW_SPEC = WorkflowSpec(
@@ -326,6 +331,59 @@ TRAINING_WORKFLOW_SPEC = WorkflowSpec(
     version="1.0",
 )
 
+OFFBOARDING_WORKFLOW_SPEC = WorkflowSpec(
+    workflow_type="offboarding",
+    name="Employee Offboarding & Exit Management",
+    description=(
+        "Coordinate employee exit preparation including notice validation, exit "
+        "checklist, asset return, knowledge handover, exit interview, and "
+        "access-revocation requests with human approval for privileged actions."
+    ),
+    supported_request_hints=[
+        "offboarding",
+        "offboard",
+        "resignation",
+        "resign",
+        "exit employee",
+        "employee exit",
+        "last working day",
+        "exit process",
+        "exit checklist",
+        "offboarding process",
+    ],
+    required_agents=list(OFFBOARDING_AGENT_NODES),
+    required_tool_capabilities=[
+        "employee.lookup",
+        "offboarding.exit.get",
+        "offboarding.policy.lookup",
+        "offboarding.policy.validate",
+        "offboarding.checklist.get",
+        "offboarding.task.create",
+        "offboarding.asset.list",
+        "offboarding.asset.return",
+        "offboarding.handover.create",
+        "offboarding.exit_interview.schedule",
+        "offboarding.access.revoke_request",
+        "offboarding.status.update",
+        "notification.send",
+    ],
+    memory_profile={
+        "short_term": True,
+        "knowledge": True,
+        "long_term": True,
+        "knowledge_workflow_type": "offboarding",
+    },
+    entry_node="offboarding_planner",
+    terminal_statuses=[
+        "completed",
+        "awaiting_human_approval",
+        "validation_failed",
+        "failed",
+    ],
+    approval_outcomes=["pending_approval", "escalate"],
+    version="1.0",
+)
+
 
 def _leave_runner(
     user_request: str,
@@ -483,8 +541,34 @@ def _training_runner(
     )
 
 
+def _offboarding_runner(
+    user_request: str,
+    *,
+    reset_runtime: bool = True,
+    organization_id: str = "",
+    user_id: str = "",
+    initiated_by: str = "",
+    user_role: str = "",
+    request_id: str | None = None,
+    entities: dict[str, Any] | None = None,
+    workflow_type: str = "offboarding",
+    **_: Any,
+):
+    return run_offboarding_workflow(
+        user_request,
+        reset_runtime=reset_runtime,
+        organization_id=organization_id,
+        user_id=user_id,
+        initiated_by=initiated_by,
+        user_role=user_role,
+        request_id=request_id,
+        entities=entities,
+        workflow_type=workflow_type,
+    )
+
+
 def register_builtin_workflows(registry: WorkflowRegistry) -> None:
-    """Register leave, recruitment, onboarding, attendance, performance, and training workflows."""
+    """Register leave through offboarding workflows."""
 
     registry.register(
         LEAVE_WORKFLOW_SPEC,
@@ -520,5 +604,11 @@ def register_builtin_workflows(registry: WorkflowRegistry) -> None:
         TRAINING_WORKFLOW_SPEC,
         runner=_training_runner,
         graph_factory=build_training_workflow,
+        validate_tools=True,
+    )
+    registry.register(
+        OFFBOARDING_WORKFLOW_SPEC,
+        runner=_offboarding_runner,
+        graph_factory=build_offboarding_workflow,
         validate_tools=True,
     )

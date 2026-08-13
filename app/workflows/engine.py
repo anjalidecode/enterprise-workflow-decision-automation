@@ -21,6 +21,9 @@ from app.agents.recruitment.response import recruitment_response_agent
 from app.agents.training.action import training_action_agent
 from app.agents.training.decision import build_training_pending_actions
 from app.agents.training.response import training_response_agent
+from app.agents.offboarding.action import offboarding_action_agent
+from app.agents.offboarding.decision import build_offboarding_pending_actions
+from app.agents.offboarding.response import offboarding_response_agent
 from app.memory.facade import reset_short_term_memory
 from app.orchestration.state import WorkflowState, create_initial_state
 from app.workflows.contracts import (
@@ -248,6 +251,28 @@ def _pending_actions_after_approval(working: WorkflowState, decision: dict[str, 
             skill_gaps=skill_gaps,
             rationale=rationale,
             include_manager_notify=True,
+        )
+
+    if workflow_type == "offboarding":
+        employee_id = str(
+            (decision.get("entity_refs") or {}).get("employee_id")
+            or (working.get("entities") or {}).get("employee_id")
+            or (working.get("employee_data") or {}).get("employee_id")
+            or ""
+        )
+        manager_id = (
+            (decision.get("entity_refs") or {}).get("manager_id")
+            or (working.get("employee_data") or {}).get("manager")
+        )
+        analysis = dict(working.get("analysis_results") or {})
+        rationale = str(decision.get("rationale") or "Offboarding preparation after human approval.")
+        return build_offboarding_pending_actions(
+            employee_id=employee_id,
+            manager_id=str(manager_id) if manager_id else None,
+            analysis=analysis,
+            rationale=rationale,
+            include_privileged=True,
+            include_standard_access_revoke=True,
         )
 
     # Default: leave-compatible write actions
@@ -530,6 +555,9 @@ class WorkflowEngine:
         elif str(working.get("workflow_type") or "") == "training":
             working = _apply_node_patch(working, training_action_agent(working))
             working = _apply_node_patch(working, training_response_agent(working))
+        elif str(working.get("workflow_type") or "") == "offboarding":
+            working = _apply_node_patch(working, offboarding_action_agent(working))
+            working = _apply_node_patch(working, offboarding_response_agent(working))
         else:
             working = _apply_node_patch(working, action_agent(working))
             working = _apply_node_patch(working, response_agent(working))

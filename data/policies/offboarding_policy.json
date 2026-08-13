@@ -1,0 +1,50 @@
+{
+  "policy_id": "HR-OFFBOARD-001",
+  "name": "Employee Offboarding & Exit Management Policy",
+  "version": "1.0",
+  "thresholds": {
+    "minimum_notice_period_days": 30,
+    "manager_approval_required": true,
+    "hr_approval_required": true
+  },
+  "outcomes": {
+    "ready": "ready",
+    "recommend": "recommend",
+    "blocked": "blocked",
+    "pending_approval": "pending_approval",
+    "escalate": "escalate"
+  },
+  "rules": {
+    "employee_must_be_active": true,
+    "mandatory_exit_fields_required": true,
+    "enforce_notice_period": true,
+    "manager_approval_required": true,
+    "hr_approval_required": true,
+    "mandatory_exit_checklist": true,
+    "asset_return_required": true,
+    "knowledge_handover_required": true,
+    "exit_interview_required": true,
+    "privileged_access_requires_human_approval": true,
+    "employment_status_change_requires_human_approval": true,
+    "no_automatic_termination": true,
+    "no_automatic_privileged_access_revocation": true,
+    "access_revocation_is_request_only": true,
+    "outstanding_assets_are_warnings": true,
+    "incomplete_handover_is_warning": true
+  },
+  "mandatory_exit_fields": [
+    "exit_type",
+    "resignation_date",
+    "requested_last_working_day",
+    "reason_category",
+    "notice_period_days"
+  ],
+  "mandatory_checklist_items": [
+    "manager_review",
+    "hr_review",
+    "asset_return",
+    "knowledge_handover",
+    "exit_interview",
+    "access_revocation_request"
+  ]
+}

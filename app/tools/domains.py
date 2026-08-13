@@ -1,8 +1,8 @@
 """Planned HR tool domains and capabilities.
 
 These entries document how workflows register tools without changing
-the ToolExecutor. Leave through training tools are implemented; remaining
-domains (offboarding) are documentation-only.
+the ToolExecutor. Leave through offboarding tools are implemented; remaining
+entries may retain historical planning names for documentation.
 """
 
 from __future__ import annotations
@@ -60,11 +60,17 @@ PLANNED_TOOL_CAPABILITIES: list[PlannedCapability] = [
     {"category": "training", "capability": "training.enrollment.create", "name": "create_training_enrollment", "side_effect": "write"},
     {"category": "training", "capability": "training.status.update", "name": "update_training_status", "side_effect": "write"},
     # Offboarding
-    {"category": "offboarding", "capability": "resignation.lookup", "name": "get_resignation", "side_effect": "read"},
-    {"category": "offboarding", "capability": "notice.validate", "name": "validate_notice_period", "side_effect": "read"},
-    {"category": "offboarding", "capability": "clearance.create", "name": "create_clearance", "side_effect": "write"},
-    {"category": "offboarding", "capability": "asset.return.request", "name": "request_asset_return", "side_effect": "write"},
-    {"category": "offboarding", "capability": "access.revoke", "name": "revoke_access", "side_effect": "write"},
+    {"category": "offboarding", "capability": "offboarding.exit.get", "name": "get_offboarding_exit", "side_effect": "read"},
+    {"category": "offboarding", "capability": "offboarding.policy.lookup", "name": "get_offboarding_policy", "side_effect": "read"},
+    {"category": "offboarding", "capability": "offboarding.policy.validate", "name": "validate_offboarding_policy", "side_effect": "read"},
+    {"category": "offboarding", "capability": "offboarding.checklist.get", "name": "get_offboarding_checklist", "side_effect": "read"},
+    {"category": "offboarding", "capability": "offboarding.task.create", "name": "create_offboarding_task", "side_effect": "write"},
+    {"category": "offboarding", "capability": "offboarding.asset.list", "name": "list_offboarding_assets", "side_effect": "read"},
+    {"category": "offboarding", "capability": "offboarding.asset.return", "name": "request_asset_return", "side_effect": "write"},
+    {"category": "offboarding", "capability": "offboarding.handover.create", "name": "create_offboarding_handover", "side_effect": "write"},
+    {"category": "offboarding", "capability": "offboarding.exit_interview.schedule", "name": "schedule_exit_interview", "side_effect": "write"},
+    {"category": "offboarding", "capability": "offboarding.access.revoke_request", "name": "create_access_revoke_request", "side_effect": "write"},
+    {"category": "offboarding", "capability": "offboarding.status.update", "name": "update_offboarding_status", "side_effect": "write"},
     # Notification
     {"category": "notification", "capability": "notification.email", "name": "send_email", "side_effect": "write"},
     {"category": "notification", "capability": "notification.in_app", "name": "send_in_app_notification", "side_effect": "write"},

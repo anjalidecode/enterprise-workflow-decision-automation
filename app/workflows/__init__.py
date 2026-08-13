@@ -36,10 +36,16 @@ from app.workflows.training_workflow import (
     build_training_workflow,
     run_training_workflow,
 )
+from app.workflows.offboarding_workflow import (
+    OFFBOARDING_AGENT_NODES,
+    build_offboarding_workflow,
+    run_offboarding_workflow,
+)
 
 __all__ = [
     "AGENT_NODES",
     "ATTENDANCE_AGENT_NODES",
+    "OFFBOARDING_AGENT_NODES",
     "ONBOARDING_AGENT_NODES",
     "PERFORMANCE_AGENT_NODES",
     "RECRUITMENT_AGENT_NODES",
@@ -50,6 +56,7 @@ __all__ = [
     "build_attendance_workflow",
     "build_leave_graph",
     "build_leave_workflow",
+    "build_offboarding_workflow",
     "build_onboarding_workflow",
     "build_performance_workflow",
     "build_recruitment_workflow",
@@ -60,6 +67,7 @@ __all__ = [
     "reset_workflow_registry",
     "run_attendance_workflow",
     "run_leave_workflow",
+    "run_offboarding_workflow",
     "run_onboarding_workflow",
     "run_performance_workflow",
     "run_recruitment_workflow",

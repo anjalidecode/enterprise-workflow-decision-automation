@@ -72,12 +72,12 @@ def test_registry_unknown_tool_fails_closed() -> None:
 
 def test_planned_domains_are_documented_not_registered() -> None:
     registry = build_registry()
-    # Leave/recruitment/onboarding/attendance/performance/training tools are implemented;
-    # later domains stay docs-only.
-    planned_offboarding = planned_capabilities_for_category("offboarding")
-    assert planned_offboarding
+    # Leave through offboarding tools are implemented.
+    # Onboarding keeps historical planning names that differ from registered tools.
+    planned_onboarding = planned_capabilities_for_category("onboarding")
+    assert planned_onboarding
     assert any(item["name"] == "search_candidates" for item in PLANNED_TOOL_CAPABILITIES)
-    for item in planned_offboarding:
+    for item in planned_onboarding:
         assert not registry.has(item["name"])
     assert registry.has("search_candidates")
     assert registry.has("calculate_candidate_score")
@@ -91,6 +91,15 @@ def test_planned_domains_are_documented_not_registered() -> None:
     assert registry.has("get_training_history")
     assert registry.has("search_training_catalog")
     assert registry.has("create_training_enrollment")
+    assert registry.has("get_offboarding_exit")
+    assert registry.has("validate_offboarding_policy")
+    assert registry.has("create_offboarding_task")
+    assert registry.has("request_asset_return")
+    assert registry.has("create_access_revoke_request")
+    planned_offboarding = planned_capabilities_for_category("offboarding")
+    assert planned_offboarding
+    for item in planned_offboarding:
+        assert registry.has(item["name"])
 
 
 def test_selector_allows_read_tool_for_research() -> None:

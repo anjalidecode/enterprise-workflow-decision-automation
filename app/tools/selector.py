@@ -79,6 +79,7 @@ class ToolSelector:
                 "attendance_action",
                 "performance_action",
                 "training_action",
+                "offboarding_action",
             }
             if agent not in write_agents:
                 raise ToolForbiddenError(

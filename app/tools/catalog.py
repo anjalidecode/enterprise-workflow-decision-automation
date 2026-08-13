@@ -38,6 +38,19 @@ from app.tools.implementations.training import (
     UpdateTrainingStatusTool,
     ValidateTrainingPolicyTool,
 )
+from app.tools.implementations.offboarding import (
+    CreateAccessRevokeRequestTool,
+    CreateOffboardingHandoverTool,
+    CreateOffboardingTaskTool,
+    GetOffboardingChecklistTool,
+    GetOffboardingExitTool,
+    GetOffboardingPolicyTool,
+    ListOffboardingAssetsTool,
+    RequestAssetReturnTool,
+    ScheduleExitInterviewTool,
+    UpdateOffboardingStatusTool,
+    ValidateOffboardingPolicyTool,
+)
 from app.tools.implementations.employee import GetEmployeeTool, GetLeaveBalanceTool
 from app.tools.implementations.leave import CalculateLeaveImpactTool, UpdateLeaveBalanceTool
 from app.tools.implementations.notification import NotifyEmployeeTool
@@ -71,7 +84,7 @@ _REGISTRY: ToolRegistry | None = None
 
 
 def build_registry() -> ToolRegistry:
-    """Create a registry with leave, recruitment, onboarding, attendance, performance, and training tools."""
+    """Create a registry with leave through offboarding tools."""
 
     registry = ToolRegistry()
     registry.register(GetEmployeeTool())
@@ -126,6 +139,17 @@ def build_registry() -> ToolRegistry:
     registry.register(CreateTrainingPlanTool())
     registry.register(CreateTrainingEnrollmentTool())
     registry.register(UpdateTrainingStatusTool())
+    registry.register(GetOffboardingExitTool())
+    registry.register(GetOffboardingPolicyTool())
+    registry.register(ValidateOffboardingPolicyTool())
+    registry.register(GetOffboardingChecklistTool())
+    registry.register(CreateOffboardingTaskTool())
+    registry.register(ListOffboardingAssetsTool())
+    registry.register(RequestAssetReturnTool())
+    registry.register(CreateOffboardingHandoverTool())
+    registry.register(ScheduleExitInterviewTool())
+    registry.register(CreateAccessRevokeRequestTool())
+    registry.register(UpdateOffboardingStatusTool())
     return registry
 
 
