@@ -74,6 +74,10 @@ async def http_exception_handler(
         code = "NOT_FOUND"
     elif exc.status_code == 400:
         code = "INVALID_REQUEST"
+    elif exc.status_code == 401:
+        code = "AUTHENTICATION_REQUIRED"
+    elif exc.status_code == 403:
+        code = "FORBIDDEN"
     elif exc.status_code == 409:
         code = "CONFLICT"
     detail = exc.detail

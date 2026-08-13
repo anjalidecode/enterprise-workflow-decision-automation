@@ -4,22 +4,22 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 
 class WorkflowRunRequest(BaseModel):
-    """Development-mode request context until Module 5B authentication/RBAC."""
+    """Authenticated workflow run body.
+
+    Identity (user_id / organization_id / role) comes from the JWT only.
+    Extra identity fields in the JSON body are ignored and never trusted.
+    """
+
+    model_config = ConfigDict(extra="ignore")
 
     request: str = Field(..., min_length=1, description="Natural-language business request")
     workflow_type: str | None = Field(
         default=None,
         description="Optional explicit workflow_type; otherwise automatic routing is used",
-    )
-    organization_id: str = Field(..., min_length=1)
-    user_id: str = Field(..., min_length=1)
-    user_role: str = Field(
-        default="hr",
-        description="Development role context (not authenticated yet)",
     )
 
     @field_validator("request")
@@ -28,14 +28,6 @@ class WorkflowRunRequest(BaseModel):
         cleaned = value.strip()
         if not cleaned:
             raise ValueError("request must be a non-empty string")
-        return cleaned
-
-    @field_validator("organization_id", "user_id")
-    @classmethod
-    def required_ids(cls, value: str) -> str:
-        cleaned = value.strip()
-        if not cleaned:
-            raise ValueError("must be a non-empty string")
         return cleaned
 
 
@@ -133,5 +125,6 @@ class WorkflowListResponse(BaseModel):
     offset: int
     note: str = (
         "In-memory API execution index for this process only. "
-        "Not durable storage; lost on restart."
+        "Not durable storage; lost on restart. Filtered by authenticated organization "
+        "and role-aware ownership rules."
     )

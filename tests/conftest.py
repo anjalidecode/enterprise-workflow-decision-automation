@@ -14,6 +14,7 @@ from app.services.training_store import reset_training_store
 from app.services.offboarding_store import reset_offboarding_store
 from app.services.hr_services_store import reset_hr_services_store
 from app.api.execution_index import reset_execution_index
+from app.auth.store import reset_user_store
 from app.tools.catalog import reset_registry
 from app.workflows.engine import reset_workflow_engine
 
@@ -37,6 +38,7 @@ def reset_simulated_runtime() -> None:
     reset_memory()
     reset_workflow_engine()
     reset_execution_index()
+    reset_user_store()
     yield
     reset_hr_store()
     reset_recruitment_store()
@@ -50,3 +52,4 @@ def reset_simulated_runtime() -> None:
     reset_memory()
     reset_workflow_engine()
     reset_execution_index()
+    reset_user_store()

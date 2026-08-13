@@ -4,52 +4,46 @@ from __future__ import annotations
 
 from fastapi import APIRouter
 
-from app.api.dependencies import (
-    EngineDep,
-    IndexDep,
-    OrganizationIdQuery,
-    RequestIdDep,
-)
+from app.api.dependencies import EngineDep, IndexDep, RequestIdDep
 from app.api.errors import APIError
 from app.api.schemas.approvals import ApprovalRequest
 from app.api.schemas.workflows import WorkflowRunResponse
 from app.api.serializers import to_run_response
+from app.auth.dependencies import CurrentUser
+from app.auth.permissions import assert_can_approve
 from app.workflows.contracts import ApprovalDecision
 from app.workflows.errors import WorkflowResumeError
 
 router = APIRouter(tags=["Approvals"])
 
 
-def _ensure_org_owns_run(index: IndexDep, workflow_id: str, organization_id: str) -> None:
-    indexed = index.get(workflow_id, organization_id=organization_id)
-    if indexed is None:
-        raise APIError(
-            status_code=404,
-            code="WORKFLOW_NOT_FOUND",
-            message=(
-                f"Workflow '{workflow_id}' was not found for organization "
-                f"'{organization_id}'."
-            ),
-        )
-
-
 def _resume(
     *,
     workflow_id: str,
-    organization_id: str,
+    user: CurrentUser,
     body: ApprovalRequest,
     approved: bool,
     engine: EngineDep,
     index: IndexDep,
     request_id: str,
 ) -> WorkflowRunResponse:
-    _ensure_org_owns_run(index, workflow_id, organization_id)
+    indexed = index.get(workflow_id, organization_id=user.organization_id)
+    if indexed is None:
+        raise APIError(
+            status_code=404,
+            code="WORKFLOW_NOT_FOUND",
+            message=(
+                f"Workflow '{workflow_id}' was not found for organization "
+                f"'{user.organization_id}'."
+            ),
+        )
+    assert_can_approve(user, indexed)
     try:
         result = engine.resume(
             workflow_id,
             ApprovalDecision(
                 approved=approved,
-                decided_by=body.user_id,
+                decided_by=user.user_id,
                 comment=body.reason,
             ),
         )
@@ -60,15 +54,14 @@ def _resume(
             message=str(exc),
         ) from exc
 
-    # Ensure resumed result remains organization-scoped in the index.
     result_org = str((result.state or {}).get("organization_id") or "")
-    if result_org != organization_id:
+    if result_org != user.organization_id:
         raise APIError(
             status_code=404,
             code="WORKFLOW_NOT_FOUND",
             message=(
                 f"Workflow '{workflow_id}' was not found for organization "
-                f"'{organization_id}'."
+                f"'{user.organization_id}'."
             ),
         )
     index.put(result)
@@ -80,21 +73,21 @@ def _resume(
     response_model=WorkflowRunResponse,
     summary="Approve a paused workflow",
     description=(
-        "Calls WorkflowEngine.resume(approved=True). No new approval logic. "
-        "organization_id query param enforces isolation (dev context until 5B)."
+        "Calls WorkflowEngine.resume(approved=True). Approver identity and role "
+        "come from the JWT — request body cannot spoof user_role."
     ),
 )
 def approve_workflow(
     workflow_id: str,
     body: ApprovalRequest,
-    organization_id: OrganizationIdQuery,
+    user: CurrentUser,
     engine: EngineDep,
     index: IndexDep,
     request_id: RequestIdDep,
 ) -> WorkflowRunResponse:
     return _resume(
         workflow_id=workflow_id,
-        organization_id=organization_id,
+        user=user,
         body=body,
         approved=True,
         engine=engine,
@@ -114,14 +107,14 @@ def approve_workflow(
 def reject_workflow(
     workflow_id: str,
     body: ApprovalRequest,
-    organization_id: OrganizationIdQuery,
+    user: CurrentUser,
     engine: EngineDep,
     index: IndexDep,
     request_id: RequestIdDep,
 ) -> WorkflowRunResponse:
     return _resume(
         workflow_id=workflow_id,
-        organization_id=organization_id,
+        user=user,
         body=body,
         approved=False,
         engine=engine,

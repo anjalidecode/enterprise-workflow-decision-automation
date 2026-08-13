@@ -4,12 +4,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Query
 
-from app.api.dependencies import (
-    EngineDep,
-    IndexDep,
-    OrganizationIdQuery,
-    RequestIdDep,
-)
+from app.api.dependencies import EngineDep, IndexDep, RequestIdDep
 from app.api.errors import APIError
 from app.api.schemas.workflows import (
     WorkflowAuditResponse,
@@ -26,16 +21,19 @@ from app.api.serializers import (
     to_run_response,
     to_summary,
 )
+from app.auth.dependencies import CurrentUser
+from app.auth.permissions import (
+    assert_can_run_workflow,
+    assert_can_view_workflow,
+    employee_run_entities,
+    filter_results_for_user,
+)
 from app.workflows.registry import get_workflow_registry
 
 router = APIRouter(tags=["Workflows"])
 
 
-def _require_indexed(
-    index: IndexDep,
-    workflow_id: str,
-    organization_id: str,
-):
+def _require_indexed(index: IndexDep, workflow_id: str, organization_id: str):
     result = index.get(workflow_id, organization_id=organization_id)
     if result is None:
         raise APIError(
@@ -50,13 +48,19 @@ def _require_indexed(
     return result
 
 
+def _get_authorized_result(index: IndexDep, workflow_id: str, user: CurrentUser):
+    result = _require_indexed(index, workflow_id, user.organization_id)
+    assert_can_view_workflow(user, result)
+    return result
+
+
 @router.get(
     "/workflows/types",
     response_model=WorkflowTypeResponse,
     summary="List registered workflow types",
-    description="Returns workflow types from WorkflowRegistry (not hardcoded).",
+    description="Returns workflow types from WorkflowRegistry. Requires authentication.",
 )
-def list_workflow_types() -> WorkflowTypeResponse:
+def list_workflow_types(_user: CurrentUser) -> WorkflowTypeResponse:
     specs = get_workflow_registry().list_workflows()
     workflows = [
         WorkflowTypeItem(
@@ -75,23 +79,30 @@ def list_workflow_types() -> WorkflowTypeResponse:
     response_model=WorkflowRunResponse,
     summary="Run a workflow",
     description=(
-        "Calls WorkflowEngine.run() only. organization_id / user_id / user_role "
-        "are development context fields until Module 5B authentication."
+        "Calls WorkflowEngine.run() using authenticated identity from the JWT. "
+        "Request-body identity fields are ignored."
     ),
 )
 def run_workflow(
     body: WorkflowRunRequest,
+    user: CurrentUser,
     engine: EngineDep,
     index: IndexDep,
     request_id: RequestIdDep,
 ) -> WorkflowRunResponse:
+    assert_can_run_workflow(
+        user,
+        request_text=body.request,
+        workflow_type=body.workflow_type,
+    )
     result = engine.run(
         body.request,
-        organization_id=body.organization_id,
-        user_id=body.user_id,
-        user_role=body.user_role,
+        organization_id=user.organization_id,
+        user_id=user.user_id,
+        user_role=user.role.value,
         workflow_type=body.workflow_type,
         request_id=request_id or None,
+        entities=employee_run_entities(user),
     )
     index.put(result)
     return to_run_response(result, request_id=request_id)
@@ -102,27 +113,30 @@ def run_workflow(
     response_model=WorkflowListResponse,
     summary="List workflow runs",
     description=(
-        "Lists runs recorded in the API-layer in-memory execution index for this "
-        "process. Not durable storage. Filtered by organization_id."
+        "Lists runs from the process-local API index for the authenticated organization, "
+        "filtered by role ownership rules."
     ),
 )
 def list_workflows(
-    organization_id: OrganizationIdQuery,
+    user: CurrentUser,
     index: IndexDep,
     workflow_type: str | None = Query(default=None),
     status: str | None = Query(default=None),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
 ) -> WorkflowListResponse:
-    items, total = index.list(
-        organization_id=organization_id,
+    items, _total = index.list(
+        organization_id=user.organization_id,
         workflow_type=workflow_type,
         status=status,
-        limit=limit,
-        offset=offset,
+        limit=10_000,
+        offset=0,
     )
+    visible = filter_results_for_user(user, items)
+    total = len(visible)
+    sliced = visible[offset : offset + limit]
     return WorkflowListResponse(
-        workflows=[to_summary(item) for item in items],
+        workflows=[to_summary(item) for item in sliced],
         total=total,
         limit=limit,
         offset=offset,
@@ -133,18 +147,15 @@ def list_workflows(
     "/workflows/{workflow_id}",
     response_model=WorkflowRunResponse,
     summary="Get a workflow run",
-    description=(
-        "Retrieve a WorkflowResult from the in-memory API index. "
-        "Requires organization_id for isolation. Not a database lookup."
-    ),
+    description="Org-scoped retrieval from the in-memory API index with ownership checks.",
 )
 def get_workflow(
     workflow_id: str,
-    organization_id: OrganizationIdQuery,
+    user: CurrentUser,
     index: IndexDep,
     request_id: RequestIdDep,
 ) -> WorkflowRunResponse:
-    result = _require_indexed(index, workflow_id, organization_id)
+    result = _get_authorized_result(index, workflow_id, user)
     return to_run_response(result, request_id=request_id)
 
 
@@ -152,14 +163,13 @@ def get_workflow(
     "/workflows/{workflow_id}/audit",
     response_model=WorkflowAuditResponse,
     summary="Get workflow audit snapshot",
-    description="Returns the existing WorkflowAuditSnapshot via a Pydantic API schema.",
 )
 def get_workflow_audit(
     workflow_id: str,
-    organization_id: OrganizationIdQuery,
+    user: CurrentUser,
     index: IndexDep,
 ) -> WorkflowAuditResponse:
-    result = _require_indexed(index, workflow_id, organization_id)
+    result = _get_authorized_result(index, workflow_id, user)
     return to_audit_response(result)
 
 
@@ -167,12 +177,11 @@ def get_workflow_audit(
     "/workflows/{workflow_id}/metrics",
     response_model=WorkflowMetricsResponse,
     summary="Get workflow run metrics",
-    description="Returns the existing WorkflowRunMetrics via a Pydantic API schema.",
 )
 def get_workflow_metrics(
     workflow_id: str,
-    organization_id: OrganizationIdQuery,
+    user: CurrentUser,
     index: IndexDep,
 ) -> WorkflowMetricsResponse:
-    result = _require_indexed(index, workflow_id, organization_id)
+    result = _get_authorized_result(index, workflow_id, user)
     return to_metrics_response(result)
