@@ -1,12 +1,16 @@
-"""Authentication service — login and token issuance."""
+"""Authentication service — login and token issuance against PostgreSQL."""
 
 from __future__ import annotations
 
+from sqlalchemy.orm import Session
+
+from app.api.errors import APIError
 from app.auth.models import User
 from app.auth.schemas import TokenResponse, UserPublic
 from app.auth.security import create_access_token, verify_password
-from app.auth.store import UserStore, get_user_store
-from app.api.errors import APIError
+from app.database.errors import DatabaseNotConfiguredError, DatabaseUnavailableError
+from app.database.repositories.user import UserRepository
+from app.database.session import session_scope
 
 
 def to_public_user(user: User) -> UserPublic:
@@ -23,34 +27,55 @@ def authenticate_user(
     username: str,
     password: str,
     *,
-    store: UserStore | None = None,
+    session: Session | None = None,
 ) -> User:
-    """Validate credentials. Never reveal whether username or password failed."""
+    """Validate credentials against PostgreSQL. Never reveal which field failed."""
 
-    user_store = store or get_user_store()
-    user = user_store.get_by_username(username)
-    if user is None or not verify_password(password, user.password_hash):
+    def _authenticate(db: Session) -> User:
+        repo = UserRepository(db)
+        user = repo.get_auth_user_by_username(username)
+        if user is None or not verify_password(password, user.password_hash):
+            raise APIError(
+                status_code=401,
+                code="INVALID_CREDENTIALS",
+                message="Invalid username or password.",
+            )
+        if not user.is_active:
+            raise APIError(
+                status_code=401,
+                code="AUTHENTICATION_REQUIRED",
+                message="User account is inactive.",
+            )
+        return user
+
+    try:
+        if session is not None:
+            return _authenticate(session)
+        with session_scope() as db:
+            return _authenticate(db)
+    except APIError:
+        raise
+    except DatabaseNotConfiguredError as exc:
         raise APIError(
-            status_code=401,
-            code="INVALID_CREDENTIALS",
-            message="Invalid username or password.",
-        )
-    if not user.is_active:
+            status_code=503,
+            code="DATABASE_NOT_CONFIGURED",
+            message=str(exc),
+        ) from exc
+    except DatabaseUnavailableError as exc:
         raise APIError(
-            status_code=401,
-            code="AUTHENTICATION_REQUIRED",
-            message="User account is inactive.",
-        )
-    return user
+            status_code=503,
+            code="DATABASE_UNAVAILABLE",
+            message=str(exc),
+        ) from exc
 
 
 def login(
     username: str,
     password: str,
     *,
-    store: UserStore | None = None,
+    session: Session | None = None,
 ) -> TokenResponse:
-    user = authenticate_user(username, password, store=store)
+    user = authenticate_user(username, password, session=session)
     token, expires_in = create_access_token(
         user_id=user.user_id,
         organization_id=user.organization_id,

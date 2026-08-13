@@ -364,10 +364,22 @@ class WorkflowEngine:
         self,
         registry: WorkflowRegistry | None = None,
         router: WorkflowRouter | None = None,
+        *,
+        persist_result: Any | None = None,
+        load_checkpoint: Any | None = None,
     ) -> None:
         self._registry = registry or get_workflow_registry()
         self._router = router or WorkflowRouter(self._registry)
         self._checkpoints: dict[str, WorkflowState] = {}
+        # Optional Module 5C hooks — do not require PostgreSQL for unit runners.
+        self._persist_result = persist_result
+        self._load_checkpoint = load_checkpoint
+
+    def _maybe_persist(self, result: WorkflowResult) -> WorkflowResult:
+        if self._persist_result is None:
+            return result
+        self._persist_result(result)
+        return result
 
     def run(
         self,
@@ -401,11 +413,13 @@ class WorkflowEngine:
                 router=router_result,
             )
             duration_ms = (time.perf_counter() - started) * 1000
-            return WorkflowResult(
-                state=dict(state),
-                audit=build_audit_snapshot(state, completed_at=completed_at),
-                metrics=build_run_metrics(state, duration_ms=duration_ms),
-                router=router_result,
+            return self._maybe_persist(
+                WorkflowResult(
+                    state=dict(state),
+                    audit=build_audit_snapshot(state, completed_at=completed_at),
+                    metrics=build_run_metrics(state, duration_ms=duration_ms),
+                    router=router_result,
+                )
             )
 
         try:
@@ -428,11 +442,13 @@ class WorkflowEngine:
                 router=router_result,
             )
             duration_ms = (time.perf_counter() - started) * 1000
-            return WorkflowResult(
-                state=dict(state),
-                audit=build_audit_snapshot(state, completed_at=completed_at),
-                metrics=build_run_metrics(state, duration_ms=duration_ms),
-                router=router_result,
+            return self._maybe_persist(
+                WorkflowResult(
+                    state=dict(state),
+                    audit=build_audit_snapshot(state, completed_at=completed_at),
+                    metrics=build_run_metrics(state, duration_ms=duration_ms),
+                    router=router_result,
+                )
             )
 
         # Short-term memory reset is owned by the leave runner today; engine also
@@ -478,7 +494,7 @@ class WorkflowEngine:
             router=router_result,
             spec_version=registered.spec.version,
         )
-        return result
+        return self._maybe_persist(result)
 
     def resume(
         self,
@@ -486,14 +502,26 @@ class WorkflowEngine:
         approval: ApprovalDecision,
         *,
         state: WorkflowState | None = None,
+        organization_id: str = "",
     ) -> WorkflowResult:
-        """Resume a paused awaiting_human_approval run (in-memory for Phase 4A)."""
+        """Resume a paused awaiting_human_approval run.
+
+        Prefer the in-process checkpoint. When missing, load the persisted
+        approval checkpoint from PostgreSQL (business/approval state). This is
+        not full LangGraph graph checkpoint reconstruction.
+        """
 
         started = time.perf_counter()
         checkpoint = state or self._checkpoints.get(workflow_id)
+        if checkpoint is None and self._load_checkpoint is not None:
+            org = organization_id.strip()
+            if org:
+                loaded = self._load_checkpoint(workflow_id, organization_id=org)
+                if isinstance(loaded, dict):
+                    checkpoint = loaded  # type: ignore[assignment]
         if checkpoint is None:
             raise WorkflowResumeError(
-                f"No in-memory checkpoint found for workflow_id '{workflow_id}'."
+                f"No approval checkpoint found for workflow_id '{workflow_id}'."
             )
         if checkpoint.get("status") != "awaiting_human_approval":
             raise WorkflowResumeError(
@@ -533,10 +561,12 @@ class WorkflowEngine:
             self._checkpoints.pop(workflow_id, None)
             completed_at = _utc_now()
             duration_ms = (time.perf_counter() - started) * 1000
-            return WorkflowResult(
-                state=dict(working),
-                audit=build_audit_snapshot(working, completed_at=completed_at),
-                metrics=build_run_metrics(working, duration_ms=duration_ms),
+            return self._maybe_persist(
+                WorkflowResult(
+                    state=dict(working),
+                    audit=build_audit_snapshot(working, completed_at=completed_at),
+                    metrics=build_run_metrics(working, duration_ms=duration_ms),
+                )
             )
 
         # Approved: clear the pause, mark executable, restore write actions, run Action → Response.
@@ -593,27 +623,77 @@ class WorkflowEngine:
 
         completed_at = _utc_now()
         duration_ms = (time.perf_counter() - started) * 1000
-        return WorkflowResult(
-            state=dict(working),
-            audit=build_audit_snapshot(working, completed_at=completed_at),
-            metrics=build_run_metrics(working, duration_ms=duration_ms),
+        return self._maybe_persist(
+            WorkflowResult(
+                state=dict(working),
+                audit=build_audit_snapshot(working, completed_at=completed_at),
+                metrics=build_run_metrics(working, duration_ms=duration_ms),
+            )
         )
 
 
 _ENGINE: WorkflowEngine | None = None
 
 
-def get_workflow_engine() -> WorkflowEngine:
+def _default_persist_result(result: WorkflowResult) -> None:
+    from app.config.settings import get_settings
+    from app.database.persistence import PersistenceService
+    from app.database.session import session_scope
+
+    if not get_settings().has_database_url:
+        return
+    with session_scope() as session:
+        PersistenceService(session).persist_workflow_result(result)
+
+
+def _default_load_checkpoint(workflow_id: str, *, organization_id: str) -> dict[str, Any] | None:
+    from app.config.settings import get_settings
+    from app.database.persistence import PersistenceService
+    from app.database.session import session_scope
+
+    if not get_settings().has_database_url:
+        return None
+    with session_scope() as session:
+        return PersistenceService(session).load_approval_checkpoint(
+            workflow_id,
+            organization_id=organization_id,
+        )
+
+
+def get_workflow_engine(*, with_persistence: bool | None = None) -> WorkflowEngine:
+    """Return process WorkflowEngine.
+
+    Persistence hooks attach when DATABASE_URL is configured (API / integration).
+    Pure unit tests call reset_workflow_engine() which starts without requiring DB.
+    """
+
     global _ENGINE
     if _ENGINE is None:
-        _ENGINE = WorkflowEngine()
+        from app.config.settings import get_settings
+
+        enable = with_persistence
+        if enable is None:
+            enable = get_settings().has_database_url
+        if enable:
+            _ENGINE = WorkflowEngine(
+                persist_result=_default_persist_result,
+                load_checkpoint=_default_load_checkpoint,
+            )
+        else:
+            _ENGINE = WorkflowEngine()
     return _ENGINE
 
 
-def reset_workflow_engine() -> WorkflowEngine:
+def reset_workflow_engine(*, with_persistence: bool = False) -> WorkflowEngine:
     global _ENGINE
     from app.workflows.registry import reset_workflow_registry
 
     reset_workflow_registry()
-    _ENGINE = WorkflowEngine()
+    if with_persistence:
+        _ENGINE = WorkflowEngine(
+            persist_result=_default_persist_result,
+            load_checkpoint=_default_load_checkpoint,
+        )
+    else:
+        _ENGINE = WorkflowEngine()
     return _ENGINE

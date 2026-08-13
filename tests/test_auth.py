@@ -10,8 +10,11 @@ from fastapi.testclient import TestClient
 
 from app.api.main import app
 from app.auth.security import hash_password
-from app.auth.store import DEV_PASSWORD, get_user_store
+from app.auth.store import DEV_PASSWORD
 from app.config.settings import get_settings
+from app.database.persistence import PersistenceService
+from app.database.repositories.user import UserRepository
+from app.database.session import session_scope
 
 LEAVE_OWN = "Check whether employee E001 can take 3 days of leave from 2026-08-17."
 LEAVE_OTHER = "Check whether employee E002 can take 3 days of leave from 2026-08-17."
@@ -248,15 +251,15 @@ def test_workflow_uses_authenticated_user(client: TestClient) -> None:
     assert response.status_code == 200
     workflow_id = response.json()["workflow_id"]
     detail = client.get(f"/api/v1/workflows/{workflow_id}", headers=headers)
-    # Engine state carries authenticated user_id from JWT.
-    from app.api.execution_index import get_execution_index
-
-    indexed = get_execution_index().get(workflow_id, organization_id="demo-org")
+    assert detail.status_code == 200
+    with session_scope() as session:
+        indexed = PersistenceService(session).get_result(
+            workflow_id, organization_id="demo-org"
+        )
     assert indexed is not None
     assert indexed.state["user_id"] == "user-hr-001"
     assert indexed.state["user_role"] == "hr"
     assert indexed.state["organization_id"] == "demo-org"
-    assert detail.status_code == 200
 
 
 def test_approval_requires_auth_and_authorized_roles(client: TestClient) -> None:
@@ -283,9 +286,10 @@ def test_approval_requires_auth_and_authorized_roles(client: TestClient) -> None
     assert approved.status_code == 200
     assert approved.json()["decision"]["outcome"] == "approve"
 
-    from app.api.execution_index import get_execution_index
-
-    indexed = get_execution_index().get(workflow_id, organization_id="demo-org")
+    with session_scope() as session:
+        indexed = PersistenceService(session).get_result(
+            workflow_id, organization_id="demo-org"
+        )
     assert indexed is not None
     approval = (indexed.state.get("metadata") or {}).get("approval") or {}
     assert approval.get("decided_by") == "user-manager-001"
@@ -344,7 +348,8 @@ def test_openapi_bearer_security(client: TestClient) -> None:
 def test_password_hashes_never_returned(client: TestClient) -> None:
     response = _login(client, "hr001")
     text = response.text
-    store_user = get_user_store().get_by_username("hr001")
+    with session_scope() as session:
+        store_user = UserRepository(session).get_auth_user_by_username("hr001")
     assert store_user is not None
     assert store_user.password_hash
     assert store_user.password_hash not in text

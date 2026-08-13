@@ -36,11 +36,11 @@ def create_app() -> FastAPI:
     application = FastAPI(
         title="Enterprise Workflow Decision Automation API",
         description=(
-            "REST API over the existing WorkflowEngine with JWT authentication "
-            "and development RBAC (Module 5B). Thin application layer — no duplicated "
-            "workflow logic. Development user store is temporary; durable auth storage "
-            "arrives later. In-memory execution index and approval checkpoints are "
-            "process-local."
+            "REST API over the existing WorkflowEngine with JWT authentication, "
+            "development RBAC, and PostgreSQL persistence for platform records "
+            "(Module 5C). Thin application layer — no duplicated workflow logic. "
+            "WorkflowState remains live per-run coordination state; PostgreSQL "
+            "stores users, organizations, runs, decisions, approvals, audit, and metrics."
         ),
         version=settings.app_version,
         docs_url="/docs",

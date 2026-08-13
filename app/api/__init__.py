@@ -1,5 +1,3 @@
-"""FastAPI application layer (Module 5A). Thin HTTP facade over WorkflowEngine."""
+"""FastAPI application layer. Prefer `from app.api.main import app`."""
 
-from app.api.main import app, create_app
-
-__all__ = ["app", "create_app"]
+__all__: list[str] = []

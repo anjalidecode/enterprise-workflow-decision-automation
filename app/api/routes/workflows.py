@@ -1,10 +1,10 @@
-"""Workflow REST endpoints — thin facade over WorkflowEngine."""
+"""Workflow REST endpoints — thin facade over WorkflowEngine + PostgreSQL."""
 
 from __future__ import annotations
 
 from fastapi import APIRouter, Query
 
-from app.api.dependencies import EngineDep, IndexDep, RequestIdDep
+from app.api.dependencies import DbSessionDep, EngineDep, RequestIdDep
 from app.api.errors import APIError
 from app.api.schemas.workflows import (
     WorkflowAuditResponse,
@@ -28,28 +28,58 @@ from app.auth.permissions import (
     employee_run_entities,
     filter_results_for_user,
 )
+from app.database.errors import (
+    DatabaseNotConfiguredError,
+    DatabaseUnavailableError,
+    PersistenceConflictError,
+)
+from app.database.persistence import PersistenceService
 from app.workflows.registry import get_workflow_registry
 
 router = APIRouter(tags=["Workflows"])
 
 
-def _require_indexed(index: IndexDep, workflow_id: str, organization_id: str):
-    result = index.get(workflow_id, organization_id=organization_id)
+def _db_error(exc: Exception) -> APIError:
+    if isinstance(exc, DatabaseNotConfiguredError):
+        return APIError(
+            status_code=503,
+            code="DATABASE_NOT_CONFIGURED",
+            message=str(exc),
+        )
+    if isinstance(exc, PersistenceConflictError):
+        return APIError(
+            status_code=409,
+            code="PERSISTENCE_CONFLICT",
+            message=str(exc),
+        )
+    return APIError(
+        status_code=503,
+        code="DATABASE_UNAVAILABLE",
+        message="Database operation failed.",
+    )
+
+
+def _require_persisted(session: DbSessionDep, workflow_id: str, organization_id: str):
+    try:
+        result = PersistenceService(session).get_result(
+            workflow_id, organization_id=organization_id
+        )
+    except (DatabaseNotConfiguredError, DatabaseUnavailableError) as exc:
+        raise _db_error(exc) from exc
     if result is None:
         raise APIError(
             status_code=404,
             code="WORKFLOW_NOT_FOUND",
             message=(
                 f"Workflow '{workflow_id}' was not found for organization "
-                f"'{organization_id}'. Results are stored in the in-memory API "
-                "index for this process only."
+                f"'{organization_id}'."
             ),
         )
     return result
 
 
-def _get_authorized_result(index: IndexDep, workflow_id: str, user: CurrentUser):
-    result = _require_indexed(index, workflow_id, user.organization_id)
+def _get_authorized_result(session: DbSessionDep, workflow_id: str, user: CurrentUser):
+    result = _require_persisted(session, workflow_id, user.organization_id)
     assert_can_view_workflow(user, result)
     return result
 
@@ -80,14 +110,13 @@ def list_workflow_types(_user: CurrentUser) -> WorkflowTypeResponse:
     summary="Run a workflow",
     description=(
         "Calls WorkflowEngine.run() using authenticated identity from the JWT. "
-        "Request-body identity fields are ignored."
+        "Request-body identity fields are ignored. Results are persisted to PostgreSQL."
     ),
 )
 def run_workflow(
     body: WorkflowRunRequest,
     user: CurrentUser,
     engine: EngineDep,
-    index: IndexDep,
     request_id: RequestIdDep,
 ) -> WorkflowRunResponse:
     assert_can_run_workflow(
@@ -95,16 +124,18 @@ def run_workflow(
         request_text=body.request,
         workflow_type=body.workflow_type,
     )
-    result = engine.run(
-        body.request,
-        organization_id=user.organization_id,
-        user_id=user.user_id,
-        user_role=user.role.value,
-        workflow_type=body.workflow_type,
-        request_id=request_id or None,
-        entities=employee_run_entities(user),
-    )
-    index.put(result)
+    try:
+        result = engine.run(
+            body.request,
+            organization_id=user.organization_id,
+            user_id=user.user_id,
+            user_role=user.role.value,
+            workflow_type=body.workflow_type,
+            request_id=request_id or None,
+            entities=employee_run_entities(user),
+        )
+    except (DatabaseNotConfiguredError, DatabaseUnavailableError, PersistenceConflictError) as exc:
+        raise _db_error(exc) from exc
     return to_run_response(result, request_id=request_id)
 
 
@@ -113,25 +144,28 @@ def run_workflow(
     response_model=WorkflowListResponse,
     summary="List workflow runs",
     description=(
-        "Lists runs from the process-local API index for the authenticated organization, "
+        "Lists persisted workflow runs for the authenticated organization, "
         "filtered by role ownership rules."
     ),
 )
 def list_workflows(
     user: CurrentUser,
-    index: IndexDep,
+    session: DbSessionDep,
     workflow_type: str | None = Query(default=None),
     status: str | None = Query(default=None),
     limit: int = Query(default=50, ge=1, le=200),
     offset: int = Query(default=0, ge=0),
 ) -> WorkflowListResponse:
-    items, _total = index.list(
-        organization_id=user.organization_id,
-        workflow_type=workflow_type,
-        status=status,
-        limit=10_000,
-        offset=0,
-    )
+    try:
+        items, _total = PersistenceService(session).list_results(
+            organization_id=user.organization_id,
+            workflow_type=workflow_type,
+            status=status,
+            limit=10_000,
+            offset=0,
+        )
+    except (DatabaseNotConfiguredError, DatabaseUnavailableError) as exc:
+        raise _db_error(exc) from exc
     visible = filter_results_for_user(user, items)
     total = len(visible)
     sliced = visible[offset : offset + limit]
@@ -147,15 +181,15 @@ def list_workflows(
     "/workflows/{workflow_id}",
     response_model=WorkflowRunResponse,
     summary="Get a workflow run",
-    description="Org-scoped retrieval from the in-memory API index with ownership checks.",
+    description="Org-scoped retrieval from PostgreSQL with ownership checks.",
 )
 def get_workflow(
     workflow_id: str,
     user: CurrentUser,
-    index: IndexDep,
+    session: DbSessionDep,
     request_id: RequestIdDep,
 ) -> WorkflowRunResponse:
-    result = _get_authorized_result(index, workflow_id, user)
+    result = _get_authorized_result(session, workflow_id, user)
     return to_run_response(result, request_id=request_id)
 
 
@@ -167,9 +201,9 @@ def get_workflow(
 def get_workflow_audit(
     workflow_id: str,
     user: CurrentUser,
-    index: IndexDep,
+    session: DbSessionDep,
 ) -> WorkflowAuditResponse:
-    result = _get_authorized_result(index, workflow_id, user)
+    result = _get_authorized_result(session, workflow_id, user)
     return to_audit_response(result)
 
 
@@ -181,7 +215,7 @@ def get_workflow_audit(
 def get_workflow_metrics(
     workflow_id: str,
     user: CurrentUser,
-    index: IndexDep,
+    session: DbSessionDep,
 ) -> WorkflowMetricsResponse:
-    result = _get_authorized_result(index, workflow_id, user)
+    result = _get_authorized_result(session, workflow_id, user)
     return to_metrics_response(result)

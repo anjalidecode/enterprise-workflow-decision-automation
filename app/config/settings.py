@@ -19,7 +19,7 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-2.5-flash"
     app_env: str = "development"
     app_name: str = "enterprise-workflow-decision-automation"
-    app_version: str = "0.6.0"
+    app_version: str = "0.7.0"
     api_v1_prefix: str = "/api/v1"
     api_host: str = "127.0.0.1"
     api_port: int = 8000
@@ -31,9 +31,31 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 60
 
+    # PostgreSQL — required for auth and durable workflow/platform records (Module 5C).
+    database_url: str = ""
+    database_pool_size: int = 5
+    database_max_overflow: int = 10
+
     @property
     def has_llm_credentials(self) -> bool:
         return bool(self.google_api_key.strip())
+
+    @property
+    def has_database_url(self) -> bool:
+        return bool(self.database_url.strip())
+
+    @property
+    def require_database_url(self) -> str:
+        """Return DATABASE_URL or raise a clear configuration error."""
+
+        url = self.database_url.strip()
+        if not url:
+            raise RuntimeError(
+                "DATABASE_URL is not configured. Set DATABASE_URL to a PostgreSQL "
+                "SQLAlchemy URL (e.g. postgresql+psycopg://user:pass@localhost:5432/enterprise_workflow) "
+                "before using persistent database operations."
+            )
+        return url
 
     @property
     def cors_origin_list(self) -> list[str]:

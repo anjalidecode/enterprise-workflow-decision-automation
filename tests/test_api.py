@@ -238,7 +238,7 @@ def test_get_list_audit_metrics(client: TestClient) -> None:
         params={"workflow_type": "leave_attendance", "limit": 10, "offset": 0},
     )
     assert listed.status_code == 200
-    assert "in-memory" in listed.json()["note"].lower()
+    assert "postgresql" in listed.json()["note"].lower()
     assert any(item["workflow_id"] == workflow_id for item in listed.json()["workflows"])
 
     audit = client.get(f"/api/v1/workflows/{workflow_id}/audit", headers=headers)

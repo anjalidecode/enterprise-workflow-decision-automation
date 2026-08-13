@@ -1,16 +1,22 @@
-"""Human approval endpoints — resume via WorkflowEngine only."""
+"""Human approval endpoints — resume via WorkflowEngine; state from PostgreSQL."""
 
 from __future__ import annotations
 
 from fastapi import APIRouter
 
-from app.api.dependencies import EngineDep, IndexDep, RequestIdDep
+from app.api.dependencies import DbSessionDep, EngineDep, RequestIdDep
 from app.api.errors import APIError
 from app.api.schemas.approvals import ApprovalRequest
 from app.api.schemas.workflows import WorkflowRunResponse
 from app.api.serializers import to_run_response
 from app.auth.dependencies import CurrentUser
 from app.auth.permissions import assert_can_approve
+from app.database.errors import (
+    DatabaseNotConfiguredError,
+    DatabaseUnavailableError,
+    PersistenceConflictError,
+)
+from app.database.persistence import PersistenceService
 from app.workflows.contracts import ApprovalDecision
 from app.workflows.errors import WorkflowResumeError
 
@@ -24,10 +30,19 @@ def _resume(
     body: ApprovalRequest,
     approved: bool,
     engine: EngineDep,
-    index: IndexDep,
+    session: DbSessionDep,
     request_id: str,
 ) -> WorkflowRunResponse:
-    indexed = index.get(workflow_id, organization_id=user.organization_id)
+    try:
+        indexed = PersistenceService(session).get_result(
+            workflow_id, organization_id=user.organization_id
+        )
+    except (DatabaseNotConfiguredError, DatabaseUnavailableError) as exc:
+        raise APIError(
+            status_code=503,
+            code="DATABASE_UNAVAILABLE",
+            message="Database operation failed.",
+        ) from exc
     if indexed is None:
         raise APIError(
             status_code=404,
@@ -46,12 +61,19 @@ def _resume(
                 decided_by=user.user_id,
                 comment=body.reason,
             ),
+            organization_id=user.organization_id,
         )
     except WorkflowResumeError as exc:
         raise APIError(
             status_code=409,
             code="WORKFLOW_NOT_RESUMABLE",
             message=str(exc),
+        ) from exc
+    except (DatabaseNotConfiguredError, DatabaseUnavailableError, PersistenceConflictError) as exc:
+        raise APIError(
+            status_code=503,
+            code="DATABASE_UNAVAILABLE",
+            message="Database operation failed.",
         ) from exc
 
     result_org = str((result.state or {}).get("organization_id") or "")
@@ -64,7 +86,6 @@ def _resume(
                 f"'{user.organization_id}'."
             ),
         )
-    index.put(result)
     return to_run_response(result, request_id=request_id)
 
 
@@ -82,7 +103,7 @@ def approve_workflow(
     body: ApprovalRequest,
     user: CurrentUser,
     engine: EngineDep,
-    index: IndexDep,
+    session: DbSessionDep,
     request_id: RequestIdDep,
 ) -> WorkflowRunResponse:
     return _resume(
@@ -91,7 +112,7 @@ def approve_workflow(
         body=body,
         approved=True,
         engine=engine,
-        index=index,
+        session=session,
         request_id=request_id,
     )
 
@@ -109,7 +130,7 @@ def reject_workflow(
     body: ApprovalRequest,
     user: CurrentUser,
     engine: EngineDep,
-    index: IndexDep,
+    session: DbSessionDep,
     request_id: RequestIdDep,
 ) -> WorkflowRunResponse:
     return _resume(
@@ -118,6 +139,6 @@ def reject_workflow(
         body=body,
         approved=False,
         engine=engine,
-        index=index,
+        session=session,
         request_id=request_id,
     )

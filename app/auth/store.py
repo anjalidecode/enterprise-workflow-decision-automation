@@ -1,6 +1,7 @@
-"""Temporary in-memory development user store (Module 5B).
+"""Development user definitions used by database seed (Module 5C).
 
-Replaced by persistent database authentication in a later phase.
+Runtime authentication reads users from PostgreSQL via UserRepository.
+This module still builds the canonical demo user list for seeding and tests.
 Passwords are stored only as bcrypt hashes — never plaintext.
 """
 

@@ -1,24 +1,31 @@
-"""FastAPI dependencies: shared engine, index, and request correlation."""
+"""FastAPI dependencies: shared engine, DB session, and request correlation."""
 
 from __future__ import annotations
 
 from typing import Annotated
 
 from fastapi import Depends, Request
+from sqlalchemy.orm import Session
 
-from app.api.execution_index import ExecutionIndex, get_execution_index
 from app.config.settings import Settings, get_settings
-from app.workflows.engine import WorkflowEngine, get_workflow_engine
+from app.database.session import get_db_session
+from app.workflows.engine import (
+    WorkflowEngine,
+    _default_load_checkpoint,
+    _default_persist_result,
+    get_workflow_engine,
+)
 
 
 def get_engine() -> WorkflowEngine:
-    """Application-scoped WorkflowEngine (process singleton; preserves checkpoints)."""
+    """Application-scoped WorkflowEngine with persistence when DATABASE_URL is set."""
 
-    return get_workflow_engine()
-
-
-def get_index() -> ExecutionIndex:
-    return get_execution_index()
+    engine = get_workflow_engine()
+    settings = get_settings()
+    if settings.has_database_url and engine._persist_result is None:
+        engine._persist_result = _default_persist_result
+        engine._load_checkpoint = _default_load_checkpoint
+    return engine
 
 
 def get_app_settings() -> Settings:
@@ -30,6 +37,6 @@ def get_request_id(request: Request) -> str:
 
 
 EngineDep = Annotated[WorkflowEngine, Depends(get_engine)]
-IndexDep = Annotated[ExecutionIndex, Depends(get_index)]
+DbSessionDep = Annotated[Session, Depends(get_db_session)]
 SettingsDep = Annotated[Settings, Depends(get_app_settings)]
 RequestIdDep = Annotated[str, Depends(get_request_id)]

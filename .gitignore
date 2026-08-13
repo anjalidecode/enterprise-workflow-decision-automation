@@ -4,6 +4,9 @@
 # Environment variables
 .env
 
+# Local user-space PostgreSQL data (development only)
+.pgdata/
+
 # Python
 __pycache__/
 *.py[cod]

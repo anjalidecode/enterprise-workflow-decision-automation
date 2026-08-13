@@ -124,7 +124,6 @@ class WorkflowListResponse(BaseModel):
     limit: int
     offset: int
     note: str = (
-        "In-memory API execution index for this process only. "
-        "Not durable storage; lost on restart. Filtered by authenticated organization "
-        "and role-aware ownership rules."
+        "Persisted workflow runs from PostgreSQL for the authenticated organization, "
+        "filtered by role-aware ownership rules."
     )

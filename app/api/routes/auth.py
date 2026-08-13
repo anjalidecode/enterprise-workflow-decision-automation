@@ -16,7 +16,7 @@ router = APIRouter(tags=["Auth"])
     response_model=TokenResponse,
     summary="Login and obtain a JWT access token",
     description=(
-        "Authenticates against the temporary development user store. "
+        "Authenticates against PostgreSQL users. "
         "Returns a Bearer access token. Never returns password hashes or secrets."
     ),
 )
