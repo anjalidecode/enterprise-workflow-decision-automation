@@ -51,6 +51,16 @@ from app.tools.implementations.offboarding import (
     UpdateOffboardingStatusTool,
     ValidateOffboardingPolicyTool,
 )
+from app.tools.implementations.hr_services import (
+    CreateHRDocumentRequestTool,
+    CreateHRServiceRequestTool,
+    EvaluateHRServiceAuthorizationTool,
+    GetHRServicePolicyTool,
+    GetHRServiceRequestTool,
+    RouteHRServiceToHRTool,
+    UpdateHRServiceRequestTool,
+    ValidateHRServicePolicyTool,
+)
 from app.tools.implementations.employee import GetEmployeeTool, GetLeaveBalanceTool
 from app.tools.implementations.leave import CalculateLeaveImpactTool, UpdateLeaveBalanceTool
 from app.tools.implementations.notification import NotifyEmployeeTool
@@ -84,7 +94,7 @@ _REGISTRY: ToolRegistry | None = None
 
 
 def build_registry() -> ToolRegistry:
-    """Create a registry with leave through offboarding tools."""
+    """Create a registry with leave through HR services tools."""
 
     registry = ToolRegistry()
     registry.register(GetEmployeeTool())
@@ -150,6 +160,14 @@ def build_registry() -> ToolRegistry:
     registry.register(ScheduleExitInterviewTool())
     registry.register(CreateAccessRevokeRequestTool())
     registry.register(UpdateOffboardingStatusTool())
+    registry.register(CreateHRServiceRequestTool())
+    registry.register(GetHRServiceRequestTool())
+    registry.register(UpdateHRServiceRequestTool())
+    registry.register(CreateHRDocumentRequestTool())
+    registry.register(RouteHRServiceToHRTool())
+    registry.register(GetHRServicePolicyTool())
+    registry.register(ValidateHRServicePolicyTool())
+    registry.register(EvaluateHRServiceAuthorizationTool())
     return registry
 
 

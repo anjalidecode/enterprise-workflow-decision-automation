@@ -75,7 +75,7 @@ class GetEmployeeDocumentsTool(BaseTool):
         category="onboarding",
         capability="employee.documents",
         side_effect="read",
-        allowed_agents=["document_verification", "onboarding_analysis"],
+        allowed_agents=["document_verification", "onboarding_analysis", "service_research"],
     )
     input_model = EmployeeDocumentsInput
     output_model = BaseModel
@@ -206,7 +206,7 @@ class ListOnboardingTasksTool(BaseTool):
         category="onboarding",
         capability="onboarding.task.list",
         side_effect="read",
-        allowed_agents=["onboarding_action", "onboarding_response", "onboarding_analysis"],
+        allowed_agents=["onboarding_action", "onboarding_response", "onboarding_analysis", "service_research"],
     )
     input_model = ListOnboardingTasksInput
     output_model = BaseModel

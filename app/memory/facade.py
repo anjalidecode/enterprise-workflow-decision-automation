@@ -172,6 +172,27 @@ AGENT_MEMORY_PERMISSIONS: dict[str, dict[MemoryLayer, set[str]]] = {
         "knowledge": {"read"},
         "long_term": {"write"},
     },
+    # HR Services specialized agents
+    "hr_services_planner": {"short_term": {"write"}},
+    "request_classification": {"short_term": {"write"}},
+    "employee_context": {"short_term": {"write"}},
+    "service_research": {"short_term": {"write"}, "knowledge": {"read"}},
+    "service_policy": {"short_term": {"write"}, "knowledge": {"read"}},
+    "service_analysis": {
+        "short_term": {"write"},
+        "knowledge": {"read"},
+    },
+    "service_decision": {
+        "short_term": {"read", "write"},
+        "long_term": {"read"},
+    },
+    "service_validation": {"short_term": {"read"}},
+    "service_action": {"short_term": {"write"}},
+    "service_response": {
+        "short_term": {"read"},
+        "knowledge": {"read"},
+        "long_term": {"write"},
+    },
 }
 
 # Extension points for future role-aware retrieval. Not enforced as full RBAC yet.

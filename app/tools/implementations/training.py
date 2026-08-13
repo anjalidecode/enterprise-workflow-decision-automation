@@ -84,7 +84,7 @@ class GetTrainingHistoryTool(BaseTool):
         category="training",
         capability="training.history.get",
         side_effect="read",
-        allowed_agents=["training_research", "skill_gap_analysis"],
+        allowed_agents=["training_research", "skill_gap_analysis", "service_research"],
         retryable=True,
         max_retries=2,
     )
@@ -118,7 +118,7 @@ class SearchTrainingCatalogTool(BaseTool):
         category="training",
         capability="training.catalog.search",
         side_effect="read",
-        allowed_agents=["training_catalog_research", "training_analysis"],
+        allowed_agents=["training_catalog_research", "training_analysis", "service_research"],
         retryable=True,
         max_retries=2,
     )

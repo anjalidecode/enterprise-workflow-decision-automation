@@ -40,6 +40,11 @@ from app.workflows.offboarding_workflow import (
     build_offboarding_workflow,
     run_offboarding_workflow,
 )
+from app.workflows.hr_services_workflow import (
+    HR_SERVICES_AGENT_NODES,
+    build_hr_services_workflow,
+    run_hr_services_workflow,
+)
 from app.workflows.registry import WorkflowRegistry
 
 LEAVE_WORKFLOW_SPEC = WorkflowSpec(
@@ -384,6 +389,75 @@ OFFBOARDING_WORKFLOW_SPEC = WorkflowSpec(
     version="1.0",
 )
 
+HR_SERVICES_WORKFLOW_SPEC = WorkflowSpec(
+    workflow_type="hr_services",
+    name="Employee HR Services",
+    description=(
+        "Classify common HR service requests, retrieve authoritative information "
+        "through existing domain tools, create tickets/documents when needed, and "
+        "route or escalate with authorization and organization isolation."
+    ),
+    supported_request_hints=[
+        "hr services",
+        "hr service",
+        "human resources",
+        "hr request",
+        "hr support",
+        "hr ticket",
+        "employment certificate",
+        "experience letter",
+        "employment verification",
+        "employee benefits",
+        "benefits information",
+        "payroll issue",
+        "salary issue",
+        "profile update",
+        "update my phone",
+        "policy question",
+        "hr policy",
+        "leave balance inquiry",
+        "attendance inquiry",
+        "hr document",
+        "employee request",
+    ],
+    required_agents=list(HR_SERVICES_AGENT_NODES),
+    required_tool_capabilities=[
+        "employee.lookup",
+        "employee.leave_balance",
+        "attendance.records.get",
+        "attendance.summary.calculate",
+        "training.catalog.search",
+        "training.history.get",
+        "onboarding.task.list",
+        "employee.documents",
+        "candidate.lookup",
+        "hr_service.request.create",
+        "hr_service.request.get",
+        "hr_service.request.update",
+        "hr_service.document.request",
+        "hr_service.route_to_hr",
+        "hr_service.policy.lookup",
+        "hr_service.policy.validate",
+        "hr_service.authorization.evaluate",
+        "notification.send",
+    ],
+    memory_profile={
+        "short_term": True,
+        "knowledge": True,
+        "long_term": True,
+        "knowledge_workflow_type": "hr_services",
+    },
+    entry_node="hr_services_planner",
+    terminal_statuses=[
+        "completed",
+        "awaiting_human_approval",
+        "validation_failed",
+        "failed",
+    ],
+    approval_outcomes=["pending_approval", "escalate"],
+    version="1.0",
+)
+
 
 def _leave_runner(
     user_request: str,
@@ -567,8 +641,34 @@ def _offboarding_runner(
     )
 
 
+def _hr_services_runner(
+    user_request: str,
+    *,
+    reset_runtime: bool = True,
+    organization_id: str = "",
+    user_id: str = "",
+    initiated_by: str = "",
+    user_role: str = "",
+    request_id: str | None = None,
+    entities: dict[str, Any] | None = None,
+    workflow_type: str = "hr_services",
+    **_: Any,
+):
+    return run_hr_services_workflow(
+        user_request,
+        reset_runtime=reset_runtime,
+        organization_id=organization_id,
+        user_id=user_id,
+        initiated_by=initiated_by,
+        user_role=user_role,
+        request_id=request_id,
+        entities=entities,
+        workflow_type=workflow_type,
+    )
+
+
 def register_builtin_workflows(registry: WorkflowRegistry) -> None:
-    """Register leave through offboarding workflows."""
+    """Register leave through HR services workflows."""
 
     registry.register(
         LEAVE_WORKFLOW_SPEC,
@@ -610,5 +710,11 @@ def register_builtin_workflows(registry: WorkflowRegistry) -> None:
         OFFBOARDING_WORKFLOW_SPEC,
         runner=_offboarding_runner,
         graph_factory=build_offboarding_workflow,
+        validate_tools=True,
+    )
+    registry.register(
+        HR_SERVICES_WORKFLOW_SPEC,
+        runner=_hr_services_runner,
+        graph_factory=build_hr_services_workflow,
         validate_tools=True,
     )

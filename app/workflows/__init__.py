@@ -41,10 +41,16 @@ from app.workflows.offboarding_workflow import (
     build_offboarding_workflow,
     run_offboarding_workflow,
 )
+from app.workflows.hr_services_workflow import (
+    HR_SERVICES_AGENT_NODES,
+    build_hr_services_workflow,
+    run_hr_services_workflow,
+)
 
 __all__ = [
     "AGENT_NODES",
     "ATTENDANCE_AGENT_NODES",
+    "HR_SERVICES_AGENT_NODES",
     "OFFBOARDING_AGENT_NODES",
     "ONBOARDING_AGENT_NODES",
     "PERFORMANCE_AGENT_NODES",
@@ -54,6 +60,7 @@ __all__ = [
     "WorkflowRegistry",
     "WorkflowRouter",
     "build_attendance_workflow",
+    "build_hr_services_workflow",
     "build_leave_graph",
     "build_leave_workflow",
     "build_offboarding_workflow",
@@ -66,6 +73,7 @@ __all__ = [
     "reset_workflow_engine",
     "reset_workflow_registry",
     "run_attendance_workflow",
+    "run_hr_services_workflow",
     "run_leave_workflow",
     "run_offboarding_workflow",
     "run_onboarding_workflow",

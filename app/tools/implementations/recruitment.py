@@ -154,7 +154,7 @@ class GetCandidateTool(BaseTool):
         category="recruitment",
         capability="candidate.lookup",
         side_effect="read",
-        allowed_agents=["candidate_research", "candidate_analysis"],
+        allowed_agents=["candidate_research", "candidate_analysis", "service_research"],
     )
     input_model = GetCandidateInput
     output_model = BaseModel

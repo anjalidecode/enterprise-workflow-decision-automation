@@ -206,6 +206,22 @@ def main() -> None:
         print(f"  Violations:        {policy.get('violations') or []}")
         print(f"  Warnings:          {policy.get('warnings') or []}")
         print(f"  Branch:            {(result.get('metadata') or {}).get('decision_branch', 'n/a')}")
+    elif result.get("workflow_type") == "hr_services":
+        print(f"  Employee:          {employee.get('name', 'n/a')} ({employee.get('employee_id', 'n/a')})")
+        print(f"  Category:          {analysis.get('category', (result.get('metadata') or {}).get('service_category', 'n/a'))}")
+        print(f"  Disposition:       {analysis.get('disposition', 'n/a')}")
+        print(f"  Policy:            {policy.get('policy_id', 'n/a')} severity={policy.get('severity')}")
+        print(f"  Route hint:        {policy.get('route_hint', (result.get('metadata') or {}).get('hr_services_route_hint', 'n/a'))}")
+        print(f"  Auth allowed:      {((result.get('metadata') or {}).get('authorization') or {}).get('allowed', 'n/a')}")
+        print(f"  Violations:        {policy.get('violations') or []}")
+        print(f"  Warnings:          {policy.get('warnings') or []}")
+        print(f"  Branch:            {(result.get('metadata') or {}).get('decision_branch', 'n/a')}")
+        tickets = [
+            item.get("request_id")
+            for item in (result.get("completed_actions") or [])
+            if item.get("type") in {"create_hr_service_request", "create_hr_document_request"}
+        ]
+        print(f"  Tickets:           {tickets or []}")
     else:
         print(f"  Employee:          {employee.get('name', 'n/a')} ({employee.get('employee_id', 'n/a')})")
         print(

@@ -96,9 +96,18 @@ def test_planned_domains_are_documented_not_registered() -> None:
     assert registry.has("create_offboarding_task")
     assert registry.has("request_asset_return")
     assert registry.has("create_access_revoke_request")
+    assert registry.has("create_hr_service_request")
+    assert registry.has("get_hr_service_request")
+    assert registry.has("create_hr_document_request")
+    assert registry.has("route_hr_service_to_hr")
+    assert registry.has("validate_hr_service_policy")
     planned_offboarding = planned_capabilities_for_category("offboarding")
     assert planned_offboarding
     for item in planned_offboarding:
+        assert registry.has(item["name"])
+    planned_hr = planned_capabilities_for_category("hr_services")
+    assert planned_hr
+    for item in planned_hr:
         assert registry.has(item["name"])
 
 

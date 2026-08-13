@@ -53,6 +53,7 @@ def test_registry_registration_and_lookup() -> None:
     assert "performance" in types
     assert "training" in types
     assert "offboarding" in types
+    assert "hr_services" in types
     registered = registry.get("leave_attendance")
     assert registered.spec.name == "Leave & Attendance"
     assert registered.runner is not None
@@ -65,13 +66,14 @@ def test_registry_registration_and_lookup() -> None:
         "performance",
         "training",
         "offboarding",
+        "hr_services",
     }
 
 
 def test_registry_unknown_workflow() -> None:
     registry = get_workflow_registry()
     with pytest.raises(UnknownWorkflowError):
-        registry.get("hr_services")
+        registry.get("not_a_real_workflow")
 
 
 def test_router_leave_classification() -> None:

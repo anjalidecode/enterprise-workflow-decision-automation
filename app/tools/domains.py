@@ -1,7 +1,7 @@
 """Planned HR tool domains and capabilities.
 
 These entries document how workflows register tools without changing
-the ToolExecutor. Leave through offboarding tools are implemented; remaining
+the ToolExecutor. Leave through HR services tools are implemented; remaining
 entries may retain historical planning names for documentation.
 """
 
@@ -71,6 +71,15 @@ PLANNED_TOOL_CAPABILITIES: list[PlannedCapability] = [
     {"category": "offboarding", "capability": "offboarding.exit_interview.schedule", "name": "schedule_exit_interview", "side_effect": "write"},
     {"category": "offboarding", "capability": "offboarding.access.revoke_request", "name": "create_access_revoke_request", "side_effect": "write"},
     {"category": "offboarding", "capability": "offboarding.status.update", "name": "update_offboarding_status", "side_effect": "write"},
+    # HR Services
+    {"category": "hr_services", "capability": "hr_service.request.create", "name": "create_hr_service_request", "side_effect": "write"},
+    {"category": "hr_services", "capability": "hr_service.request.get", "name": "get_hr_service_request", "side_effect": "read"},
+    {"category": "hr_services", "capability": "hr_service.request.update", "name": "update_hr_service_request", "side_effect": "write"},
+    {"category": "hr_services", "capability": "hr_service.document.request", "name": "create_hr_document_request", "side_effect": "write"},
+    {"category": "hr_services", "capability": "hr_service.route_to_hr", "name": "route_hr_service_to_hr", "side_effect": "write"},
+    {"category": "hr_services", "capability": "hr_service.policy.lookup", "name": "get_hr_service_policy", "side_effect": "read"},
+    {"category": "hr_services", "capability": "hr_service.policy.validate", "name": "validate_hr_service_policy", "side_effect": "read"},
+    {"category": "hr_services", "capability": "hr_service.authorization.evaluate", "name": "evaluate_hr_service_authorization", "side_effect": "read"},
     # Notification
     {"category": "notification", "capability": "notification.email", "name": "send_email", "side_effect": "write"},
     {"category": "notification", "capability": "notification.in_app", "name": "send_in_app_notification", "side_effect": "write"},

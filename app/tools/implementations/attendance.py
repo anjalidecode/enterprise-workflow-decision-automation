@@ -76,7 +76,7 @@ class GetAttendanceRecordsTool(BaseTool):
         category="attendance",
         capability="attendance.records.get",
         side_effect="read",
-        allowed_agents=["attendance_research", "attendance_analysis"],
+        allowed_agents=["attendance_research", "attendance_analysis", "service_research"],
         retryable=True,
         max_retries=2,
     )
@@ -112,7 +112,7 @@ class CalculateAttendanceSummaryTool(BaseTool):
         category="attendance",
         capability="attendance.summary.calculate",
         side_effect="read",
-        allowed_agents=["attendance_analysis", "attendance_research"],
+        allowed_agents=["attendance_analysis", "attendance_research", "service_research"],
         retryable=True,
         max_retries=2,
     )

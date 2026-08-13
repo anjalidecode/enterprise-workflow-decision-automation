@@ -19,6 +19,7 @@ ToolCategory = Literal[
     "performance",
     "training",
     "offboarding",
+    "hr_services",
     "notification",
     "documents",
     "analytics",

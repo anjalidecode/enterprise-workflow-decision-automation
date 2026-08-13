@@ -1,0 +1,58 @@
+{
+  "policy_id": "HR-SVC-001",
+  "name": "Employee HR Services Policy",
+  "version": "1.0",
+  "auto_resolvable_categories": [
+    "leave_balance",
+    "attendance",
+    "policy_information",
+    "benefits",
+    "training",
+    "onboarding"
+  ],
+  "document_categories": [
+    "employment_document"
+  ],
+  "ticket_categories": [
+    "employee_profile",
+    "payroll_routing",
+    "general_hr"
+  ],
+  "approval_categories": [
+    "employee_profile"
+  ],
+  "escalation_categories": [
+    "payroll_routing"
+  ],
+  "sensitive_categories": [
+    "leave_balance",
+    "attendance",
+    "employee_profile",
+    "payroll_routing",
+    "recruitment_status",
+    "onboarding"
+  ],
+  "privileged_roles": [
+    "hr_admin",
+    "hr",
+    "manager",
+    "recruiter"
+  ],
+  "recruitment_roles": [
+    "hr_admin",
+    "hr",
+    "recruiter"
+  ],
+  "forbidden_auto_changes": [
+    "salary",
+    "payroll",
+    "employment_status",
+    "sensitive_employee_records",
+    "performance_records"
+  ],
+  "document_types": [
+    "employment_certificate",
+    "experience_letter",
+    "employment_verification"
+  ]
+}

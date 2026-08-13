@@ -47,7 +47,7 @@ class GetEmployeeTool(BaseTool):
         category="employee",
         capability="employee.lookup",
         side_effect="read",
-        allowed_agents=["research", "employee_research", "attendance_research", "performance_research", "training_research", "offboarding_employee_research"],
+        allowed_agents=["research", "employee_research", "attendance_research", "performance_research", "training_research", "offboarding_employee_research", "employee_context"],
         retryable=True,
         max_retries=2,
     )
@@ -85,7 +85,7 @@ class GetLeaveBalanceTool(BaseTool):
         category="employee",
         capability="employee.leave_balance",
         side_effect="read",
-        allowed_agents=["research", "analysis"],
+        allowed_agents=["research", "analysis", "service_research"],
         retryable=True,
         max_retries=2,
     )

@@ -36,6 +36,7 @@ WORKFLOW_TYPE_BY_FOLDER = {
     "offboarding": "offboarding",
     "attendance": "attendance",
     "training": "training",
+    "hr_services": "hr_services",
 }
 
 
