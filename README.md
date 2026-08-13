@@ -2,7 +2,7 @@
 
 HR operations workflow automation and decision-support platform. Specialized agents collaborate through shared structured state, coordinated by a LangGraph orchestrator. This is **not** a chatbot and not a single LLM with tools.
 
-## Current status (Modules 1–4 complete)
+## Current status (Modules 1–5A)
 
 | Module | Scope |
 |--------|--------|
@@ -11,46 +11,140 @@ HR operations workflow automation and decision-support platform. Specialized age
 | **3** | MemoryFacade (short-term, knowledge, long-term) |
 | **4A** | Platform spine: `WorkflowSpec`, Registry, Router, Engine, audit, metrics |
 | **4B–4H** | Eight domain workflows on the same engine |
+| **5A** | FastAPI REST API layer over `WorkflowEngine` (no auth / DB / frontend yet) |
 
-**Module 4 evaluation / hardening** verified that all workflows share one platform path:
-
-`Router → Registry → WorkflowEngine → LangGraph → Agents → Tools → Policies → Memory/Knowledge → Decision → Validation → Actions → Human approval → Audit → Metrics`
-
-**Do not treat this as production deployment.** HR stores, notifications, and approval checkpoints are simulated.
+**Do not treat the API as production-ready.** There is no authentication, no durable database, and approval/execution indexes are in-memory for the current process only. Modules 5B/5C will add authentication/RBAC and persistence.
 
 ## Architecture
 
 ```
-User Request
+HTTP Client / CLI
     │
     ▼
-WorkflowRouter  ──► WorkflowRegistry
+FastAPI (app/api) ── schemas / org isolation / request id
     │
     ▼
 WorkflowEngine.run() / resume()
     │
     ▼
-Domain LangGraph workflow (WorkflowState)
-    │
-    ├── Agents (planner → research → policy → analysis → decision → validation → action/response)
-    ├── Tools (Selector → Registry → Executor → simulated services)
-    ├── MemoryFacade (short-term / knowledge / long-term)
-    └── KnowledgeStore (offline lexical handbook search)
+WorkflowRouter  ──► WorkflowRegistry
     │
     ▼
-WorkflowResult { state, audit, metrics, router, spec_version }
+Domain LangGraph workflow (WorkflowState)
+    │
+    ├── Agents → Tools → Policies → Memory / Knowledge
+    └── Decision → Validation → Action / Human approval
+    │
+    ▼
+WorkflowResult { state, audit, metrics, router }
+    │
+    ▼
+API schemas + in-memory execution index (process-local)
 ```
 
-Shared platform contracts live under `app/workflows/` (`contracts`, `registry`, `router`, `engine`, `results`, `builtins`). Domain graphs live beside them as `*_workflow.py`. Agents never invent a parallel engine.
+The API is a **thin application layer**. It must not call LangGraph nodes, agents, JSON data files, domain stores, memory stores, or tools directly.
 
-### Decision authority (invariant)
+## FastAPI (Module 5A)
 
-| Layer | Role |
-|-------|------|
-| Structured tools + policy JSON | **Authoritative** for eligibility, violations, balances, prerequisites, authorization |
-| Memory + knowledge | **Context only** — warnings, citations, confidence, explanation |
+### Start the API
 
-Memory must never override policy violations, missing prerequisites, insufficient leave balance, attendance/performance/training/offboarding rules, or authorization restrictions.
+```bash
+source .venv/bin/activate
+uvicorn app.api.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+| Resource | URL |
+|----------|-----|
+| Base API | `http://127.0.0.1:8000/api/v1` |
+| Swagger UI | `http://127.0.0.1:8000/docs` |
+| ReDoc | `http://127.0.0.1:8000/redoc` |
+| OpenAPI JSON | `http://127.0.0.1:8000/openapi.json` |
+
+CLI remains available and unchanged:
+
+```bash
+python run.py "Check whether employee E001 can take 3 days of leave."
+```
+
+### Endpoints
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| `GET` | `/api/v1/health` | Liveness (no API key) |
+| `GET` | `/api/v1/workflows/types` | Registered workflow types from `WorkflowRegistry` |
+| `POST` | `/api/v1/workflows/run` | Run via `WorkflowEngine.run()` |
+| `GET` | `/api/v1/workflows` | List runs in the process-local API index |
+| `GET` | `/api/v1/workflows/{workflow_id}` | Get a run (org-scoped) |
+| `GET` | `/api/v1/workflows/{workflow_id}/audit` | Existing `WorkflowAuditSnapshot` |
+| `GET` | `/api/v1/workflows/{workflow_id}/metrics` | Existing `WorkflowRunMetrics` |
+| `POST` | `/api/v1/workflows/{workflow_id}/approve` | `WorkflowEngine.resume(approved=True)` |
+| `POST` | `/api/v1/workflows/{workflow_id}/reject` | `WorkflowEngine.resume(approved=False)` |
+
+Retrieval and approval endpoints require `organization_id` as a query parameter for isolation (development context until Module 5B).
+
+### Example: run a workflow
+
+```bash
+curl -s http://127.0.0.1:8000/api/v1/workflows/run \
+  -H 'Content-Type: application/json' \
+  -H 'X-Request-ID: demo-1' \
+  -d '{
+    "request": "Check whether employee E001 can take 3 days of leave.",
+    "organization_id": "demo-org",
+    "user_id": "demo-user",
+    "user_role": "hr"
+  }'
+```
+
+Example response shape:
+
+```json
+{
+  "workflow_id": "...",
+  "workflow_type": "leave_attendance",
+  "status": "completed",
+  "current_stage": "response",
+  "organization_id": "demo-org",
+  "decision": {
+    "outcome": "approve",
+    "rationale": "...",
+    "confidence": 0.92,
+    "requires_human_approval": false
+  },
+  "response": "...",
+  "audit": { "...": "..." },
+  "metrics": { "...": "..." },
+  "request_id": "demo-1"
+}
+```
+
+### Example: approval
+
+```bash
+# After a run returns status=awaiting_human_approval
+curl -s -X POST \
+  "http://127.0.0.1:8000/api/v1/workflows/{workflow_id}/approve?organization_id=demo-org" \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "user_id": "manager-001",
+    "user_role": "manager",
+    "reason": "Approved after review."
+  }'
+```
+
+Reject uses the same body against `/reject`.
+
+### Request correlation
+
+Every response includes `X-Request-ID`. If the client sends `X-Request-ID`, it is preserved; otherwise the API generates one. This is distinct from `workflow_id`.
+
+### CORS
+
+Origins come from `CORS_ORIGINS` (comma-separated). Development defaults allow localhost frontend ports. The API does **not** use `allow_origins=["*"]` as a pretend production setting.
+
+### Development context (not authentication)
+
+`organization_id`, `user_id`, and `user_role` are explicit development fields preparing Module 5B auth/RBAC. They are **not** trusted production identity claims yet.
 
 ## Registered workflow types
 
@@ -65,60 +159,19 @@ Memory must never override policy violations, missing prerequisites, insufficien
 | `offboarding` | Exit checklist, assets, handover, access revoke (privileged approval) |
 | `hr_services` | Coordination/service layer: certificates, tickets, inquiries, routing — **not** a replacement for domain workflows |
 
-Informational phrasing such as `leave balance inquiry` / `attendance inquiry` routes to `hr_services`. Actionable domain phrasing (e.g. “take 3 days of leave”, “analyze attendance”, “recommend training”) routes to the matching domain workflow.
+## Agent / tool / memory architecture
 
-## Agent architecture
-
-Each workflow is a LangGraph `StateGraph(WorkflowState)` of specialized nodes (planner/research/policy/analysis/decision/validation/action/response, with domain naming). Validation branches to action only when the decision is executable and not awaiting human approval.
-
-Agents request capabilities; they do not call stores or SMTP directly.
-
-## Tool architecture
-
-- **Registry** (`app/tools/registry.py`): fail-closed name/capability lookup
-- **Selector** (`app/tools/selector.py`): agent allowlist + write guards (`validated=True`)
-- **Executor** (`app/tools/executor.py`): schema validation, authorization, retries for transient `SERVICE_ERROR`, redacted traces
-- **Idempotency** (`app/tools/idempotency.py`): org + workflow + capability keys so retries do not double-apply writes
-- **Implementations**: leave, recruitment, onboarding, attendance, performance, training, offboarding, hr_services, notifications — all against in-memory simulated stores
-
-## Memory architecture
-
-Agents use `app.memory.facade` only:
-
-| Layer | Scope |
-|-------|--------|
-| Short-term | `organization_id` + `workflow_id` notebook (cleared between runs) |
-| Knowledge | Lexical search over `data/knowledge/` via `KnowledgeStore` (global + matching org) |
-| Long-term | Compact outcomes scoped by `organization_id` + `employee_id` + `workflow_type` (JSONL development backend) |
-
-Every access appends a redacted record to `WorkflowState.memory_accesses`.
-
-## Knowledge architecture
-
-Offline markdown handbooks under `data/knowledge/{domain}/` plus optional `organizations/{organization_id}/`. Search never overrides structured `data/policies/*.json`.
-
-## Decision engine
-
-Per-domain decision agents produce a shared `WorkflowDecision` shape (`approve` / `reject` / `pending_approval` / `escalate` / `recommend` / `ready` / `blocked`, plus evidence/blockers/warnings). Validation agents gate write tools and set `metadata.route`.
+Unchanged from Modules 1–4. Agents request capabilities through the Tool Registry/Selector/Executor. Memory goes through `MemoryFacade` only. Structured policy/tools remain authoritative; memory/knowledge are context only.
 
 ## Human approval
 
-When outcome is `pending_approval` / `escalate` with `requires_human_approval`:
+When a run pauses at `awaiting_human_approval`:
 
-1. Validation routes to response (no high-impact writes)
-2. Engine stores an **in-memory** checkpoint and returns `WorkflowResult` with `approval_checkpoint`
-3. `WorkflowEngine.resume(workflow_id, ApprovalDecision(approved=True|False))` executes or rejects pending writes
+1. Engine stores an **in-memory** checkpoint
+2. API indexes the `WorkflowResult` for the process
+3. `/approve` or `/reject` calls `WorkflowEngine.resume`
 
-There is no approval UI yet (Module 5). Checkpoints are process-local and lost on restart.
-
-## Audit and metrics
-
-Built once in `app/workflows/results.py` for every workflow (not per-domain builders):
-
-- **Audit:** workflow id/type/org, timing, status, agents, tool executions, memory accesses, decision, actions, errors, approval checkpoint, final outcome
-- **Metrics:** duration, agent/tool counts, success/retry rates, validation_failed, human_approval_required, confidence, action_success_rate, escalated, status
-
-Returned inside the shared `WorkflowResult`.
+Checkpoints and the API execution index are process-local and lost on restart.
 
 ## Setup
 
@@ -136,44 +189,30 @@ cp .env.example .env
 GOOGLE_API_KEY=
 GEMINI_MODEL=
 APP_ENV=development
+APP_VERSION=0.5.0
+API_V1_PREFIX=/api/v1
+API_HOST=127.0.0.1
+API_PORT=8000
+CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173
 ```
 
-Default model is `gemini-2.5-flash`. Modules 1–4 do not require Gemini for the deterministic agent paths used in tests and CLI demos.
+Default model is `gemini-2.5-flash`. Current deterministic agent paths used in tests/CLI/API demos do not require Gemini.
 
 ## CLI examples
 
 ```bash
 source .venv/bin/activate
 
-# Leave
 python run.py "Check whether employee E001 can take 3 days of leave."
-
-# Recruitment
 python run.py "Find candidates for the Python Backend Developer position."
-
-# Onboarding
 python run.py "Start onboarding for employee E003."
-
-# Attendance
 python run.py "Analyze attendance for employee E003 for July 2026."
-
-# Performance
 python run.py "Analyze performance for employee E003 for Q2 2026."
-
-# Training
 python run.py "Recommend training for employee E003."
-
-# Offboarding
 python run.py "Start offboarding for employee E006."
-
-# HR Services
 python run.py "Request an employment certificate for employee E003."
-
-# Explicit override / tenant context
 python run.py "Please process this case." --workflow-type hr_services --organization-id org-demo --user-id E003 --user-role employee
 ```
-
-`run.py` is a thin `WorkflowEngine` client. It prints state, tools, memory, decision, actions, audit, and metrics.
 
 ## Tests
 
@@ -182,26 +221,33 @@ source .venv/bin/activate
 python -m pytest tests -q
 ```
 
-Tests are deterministic and do not call Gemini. Platform evaluation coverage lives in `tests/test_module4_platform_eval.py` plus per-domain suites. Current suite: **280** tests passing.
+Tests are deterministic and do not call Gemini. API coverage lives in `tests/test_api.py` (FastAPI `TestClient`; no live server required).
 
 ## Simulated components (explicit)
 
-- In-memory HR / recruitment / onboarding / attendance / performance / training / offboarding / HR services stores (JSON under `data/` is seed only; not written back)
+- In-memory HR / recruitment / onboarding / attendance / performance / training / offboarding / HR services stores
 - In-memory notification inbox with fault injection
 - In-memory human-approval checkpoints
+- In-memory API execution index (list/get for the current process)
 - Lexical (non-vector) knowledge search
 - Deterministic agents (no live LLM required for current paths)
 
 ## Current limitations
 
-- No frontend, dashboard, authentication, REST API, PostgreSQL, Docker, or cloud deployment (Module 5)
+- **Not production-ready** — no authentication, JWT/OAuth, PostgreSQL, Redis, Docker, or cloud deployment
+- No frontend / dashboard yet
+- API execution index and approval checkpoints are not durable across process restarts
+- Organization/user/role fields are development context only until Module 5B
 - No real email or external HRIS integrations
-- Human approval has no UI; resume is programmatic via `WorkflowEngine.resume`
-- Approval checkpoints are not durable across process restarts
-- Empty `organization_id` on many seed records matches any tenant filter (demo convenience; document as evaluation constraint)
-- Agent nodes are deterministic; LLM enrichment is optional/future
+- Empty `organization_id` on many seed records matches any tenant filter (demo convenience)
 - `leave_attendance` expects actionable leave requests; pure balance questions are better as `leave balance inquiry` → `hr_services`
 
-## Module 5 (not started)
+## Later Module 5 phases (not started)
 
-REST APIs, web dashboard, monitoring/logging, durable persistence, authentication, and deployment belong to Module 5. Do not start them in this repository phase.
+| Phase | Planned |
+|-------|---------|
+| **5B** | Authentication / RBAC |
+| **5C** | Durable persistence (e.g. PostgreSQL) |
+| Later | Frontend, monitoring, Docker, cloud deployment |
+
+Stop after Module 5A in this repository phase for API delivery.
