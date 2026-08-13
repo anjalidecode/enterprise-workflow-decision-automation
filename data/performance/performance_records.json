@@ -1,0 +1,112 @@
+[
+  {
+    "employee_id": "E003",
+    "organization_id": "",
+    "review_period": "2026-Q2",
+    "kpis": {
+      "quality_score": 96,
+      "on_time_delivery_pct": 98,
+      "stakeholder_satisfaction": 92,
+      "project_completion_pct": 100
+    },
+    "projects": [
+      {
+        "name": "API platform v2",
+        "status": "delivered",
+        "on_time": true,
+        "quality": "high"
+      },
+      {
+        "name": "Developer portal refresh",
+        "status": "delivered",
+        "on_time": true,
+        "quality": "high"
+      }
+    ],
+    "strengths": ["reliable delivery", "code quality", "mentorship"],
+    "improvement_areas": ["public speaking"],
+    "skill_gaps": [],
+    "previous_outcome": "exceeds_expectations"
+  },
+  {
+    "employee_id": "E003",
+    "organization_id": "",
+    "review_period": "2026-Q1",
+    "kpis": {
+      "quality_score": 93,
+      "on_time_delivery_pct": 94,
+      "stakeholder_satisfaction": 90,
+      "project_completion_pct": 94
+    },
+    "projects": [
+      {
+        "name": "Service hardening backlog",
+        "status": "delivered",
+        "on_time": true,
+        "quality": "high"
+      }
+    ],
+    "strengths": ["technical ownership"],
+    "improvement_areas": [],
+    "skill_gaps": [],
+    "previous_outcome": "meets_expectations"
+  },
+  {
+    "employee_id": "E004",
+    "organization_id": "",
+    "review_period": "2026-Q2",
+    "kpis": {
+      "quality_score": 78,
+      "on_time_delivery_pct": 74,
+      "stakeholder_satisfaction": 81,
+      "project_completion_pct": 75
+    },
+    "projects": [
+      {
+        "name": "Spring brand campaign",
+        "status": "partial",
+        "on_time": false,
+        "quality": "mixed"
+      },
+      {
+        "name": "Sales collaboration launch",
+        "status": "delivered",
+        "on_time": true,
+        "quality": "good"
+      }
+    ],
+    "strengths": ["cross-team collaboration", "creative campaign design"],
+    "improvement_areas": ["campaign conversion", "certification completion"],
+    "skill_gaps": ["marketing analytics", "campaign attribution"],
+    "previous_outcome": "meets_expectations"
+  },
+  {
+    "employee_id": "E005",
+    "organization_id": "",
+    "review_period": "2026-Q2",
+    "kpis": {
+      "quality_score": 62,
+      "on_time_delivery_pct": 48,
+      "stakeholder_satisfaction": 55,
+      "project_completion_pct": 20
+    },
+    "projects": [
+      {
+        "name": "Platform migration wave 1",
+        "status": "slipped",
+        "on_time": false,
+        "quality": "low"
+      },
+      {
+        "name": "Incident response playbooks",
+        "status": "incomplete",
+        "on_time": false,
+        "quality": "low"
+      }
+    ],
+    "strengths": ["system knowledge"],
+    "improvement_areas": ["reliability ownership", "delivery follow-through", "documentation"],
+    "skill_gaps": ["incident response", "platform migration", "technical documentation"],
+    "previous_outcome": "needs_improvement"
+  }
+]

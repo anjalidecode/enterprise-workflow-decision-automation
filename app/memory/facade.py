@@ -110,6 +110,26 @@ AGENT_MEMORY_PERMISSIONS: dict[str, dict[MemoryLayer, set[str]]] = {
         "knowledge": {"read"},
         "long_term": {"write"},
     },
+    # Performance-specialized agents
+    "performance_planner": {"short_term": {"write"}},
+    "performance_research": {"short_term": {"write"}},
+    "goal_analysis": {"short_term": {"write"}},
+    "performance_analysis": {
+        "short_term": {"write"},
+        "knowledge": {"read"},
+    },
+    "performance_policy": {"short_term": {"write"}, "knowledge": {"read"}},
+    "performance_decision": {
+        "short_term": {"read", "write"},
+        "long_term": {"read"},
+    },
+    "performance_validation": {"short_term": {"read"}},
+    "performance_action": {"short_term": {"write"}},
+    "performance_response": {
+        "short_term": {"read"},
+        "knowledge": {"read"},
+        "long_term": {"write"},
+    },
 }
 
 # Extension points for future role-aware retrieval. Not enforced as full RBAC yet.

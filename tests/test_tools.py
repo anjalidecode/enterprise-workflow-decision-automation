@@ -58,6 +58,7 @@ def test_registry_registration_and_lookup() -> None:
     assert "employee" in registry.categories()
     assert "recruitment" in registry.categories()
     assert "attendance" in registry.categories()
+    assert "performance" in registry.categories()
 
 
 def test_registry_unknown_tool_fails_closed() -> None:
@@ -70,11 +71,12 @@ def test_registry_unknown_tool_fails_closed() -> None:
 
 def test_planned_domains_are_documented_not_registered() -> None:
     registry = build_registry()
-    # Leave/recruitment/onboarding/attendance tools are implemented; later domains stay docs-only.
-    planned_performance = planned_capabilities_for_category("performance")
-    assert planned_performance
+    # Leave/recruitment/onboarding/attendance/performance tools are implemented;
+    # later domains stay docs-only.
+    planned_training = planned_capabilities_for_category("training")
+    assert planned_training
     assert any(item["name"] == "search_candidates" for item in PLANNED_TOOL_CAPABILITIES)
-    for item in planned_performance:
+    for item in planned_training:
         assert not registry.has(item["name"])
     assert registry.has("search_candidates")
     assert registry.has("calculate_candidate_score")
@@ -82,6 +84,9 @@ def test_planned_domains_are_documented_not_registered() -> None:
     assert registry.has("request_system_access")
     assert registry.has("get_attendance_records")
     assert registry.has("create_attendance_review")
+    assert registry.has("get_performance_records")
+    assert registry.has("create_performance_review")
+    assert registry.has("create_improvement_plan")
 
 
 def test_selector_allows_read_tool_for_research() -> None:

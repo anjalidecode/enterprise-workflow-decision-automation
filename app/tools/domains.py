@@ -1,8 +1,8 @@
 """Planned HR tool domains and capabilities.
 
 These entries document how future workflows will register tools without changing
-the ToolExecutor. Recruitment, onboarding, and attendance tools are implemented;
-remaining domains (performance, training, offboarding) are documentation-only.
+the ToolExecutor. Recruitment, onboarding, attendance, and performance tools are
+implemented; remaining domains (training, offboarding) are documentation-only.
 """
 
 from __future__ import annotations
@@ -40,9 +40,15 @@ PLANNED_TOOL_CAPABILITIES: list[PlannedCapability] = [
     {"category": "attendance", "capability": "attendance.warning.send", "name": "send_attendance_warning", "side_effect": "write"},
     {"category": "attendance", "capability": "attendance.status.update", "name": "update_attendance_status", "side_effect": "write"},
     # Performance
-    {"category": "performance", "capability": "performance.lookup", "name": "get_performance", "side_effect": "read"},
-    {"category": "performance", "capability": "goals.lookup", "name": "get_goals", "side_effect": "read"},
-    {"category": "performance", "capability": "development.plan.create", "name": "create_development_plan", "side_effect": "write"},
+    {"category": "performance", "capability": "performance.records.get", "name": "get_performance_records", "side_effect": "read"},
+    {"category": "performance", "capability": "performance.goals.get", "name": "get_performance_goals", "side_effect": "read"},
+    {"category": "performance", "capability": "performance.summary.calculate", "name": "calculate_performance_summary", "side_effect": "read"},
+    {"category": "performance", "capability": "performance.policy.lookup", "name": "get_performance_policy", "side_effect": "read"},
+    {"category": "performance", "capability": "performance.policy.validate", "name": "validate_performance_policy", "side_effect": "read"},
+    {"category": "performance", "capability": "performance.support.find", "name": "find_performance_support", "side_effect": "read"},
+    {"category": "performance", "capability": "performance.review.create", "name": "create_performance_review", "side_effect": "write"},
+    {"category": "performance", "capability": "performance.improvement_plan.create", "name": "create_improvement_plan", "side_effect": "write"},
+    {"category": "performance", "capability": "performance.status.update", "name": "update_performance_status", "side_effect": "write"},
     # Training
     {"category": "training", "capability": "training.search", "name": "search_training", "side_effect": "read"},
     {"category": "training", "capability": "training.assign", "name": "assign_training", "side_effect": "write"},

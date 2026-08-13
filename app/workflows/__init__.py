@@ -15,6 +15,11 @@ from app.workflows.onboarding_workflow import (
     build_onboarding_workflow,
     run_onboarding_workflow,
 )
+from app.workflows.performance_workflow import (
+    PERFORMANCE_AGENT_NODES,
+    build_performance_workflow,
+    run_performance_workflow,
+)
 from app.workflows.recruitment_workflow import (
     RECRUITMENT_AGENT_NODES,
     build_recruitment_workflow,
@@ -31,6 +36,7 @@ __all__ = [
     "AGENT_NODES",
     "ATTENDANCE_AGENT_NODES",
     "ONBOARDING_AGENT_NODES",
+    "PERFORMANCE_AGENT_NODES",
     "RECRUITMENT_AGENT_NODES",
     "WorkflowEngine",
     "WorkflowRegistry",
@@ -39,6 +45,7 @@ __all__ = [
     "build_leave_graph",
     "build_leave_workflow",
     "build_onboarding_workflow",
+    "build_performance_workflow",
     "build_recruitment_workflow",
     "get_workflow_engine",
     "get_workflow_registry",
@@ -47,5 +54,6 @@ __all__ = [
     "run_attendance_workflow",
     "run_leave_workflow",
     "run_onboarding_workflow",
+    "run_performance_workflow",
     "run_recruitment_workflow",
 ]

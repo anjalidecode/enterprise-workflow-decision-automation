@@ -13,6 +13,9 @@ from app.agents.attendance.decision import build_attendance_pending_actions
 from app.agents.attendance.response import attendance_response_agent
 from app.agents.onboarding.action import onboarding_action_agent
 from app.agents.onboarding.response import onboarding_response_agent
+from app.agents.performance.action import performance_action_agent
+from app.agents.performance.decision import build_performance_pending_actions
+from app.agents.performance.response import performance_response_agent
 from app.agents.recruitment.action import recruitment_action_agent
 from app.agents.recruitment.response import recruitment_response_agent
 from app.memory.facade import reset_short_term_memory
@@ -151,6 +154,49 @@ def _pending_actions_after_approval(working: WorkflowState, decision: dict[str, 
             manager_id=str(manager_id) if manager_id else None,
             severity=severity if severity in {"warning", "escalation"} else "escalation",
             rationale=rationale,
+            include_manager_notify=True,
+        )
+
+    if workflow_type == "performance":
+        employee_id = str(
+            (decision.get("entity_refs") or {}).get("employee_id")
+            or (working.get("entities") or {}).get("employee_id")
+            or (working.get("employee_data") or {}).get("employee_id")
+            or ""
+        )
+        manager_id = (
+            (decision.get("entity_refs") or {}).get("manager_id")
+            or (working.get("employee_data") or {}).get("manager")
+        )
+        severity = str(
+            (decision.get("entity_refs") or {}).get("severity")
+            or (working.get("metadata") or {}).get("performance_severity")
+            or "escalation"
+        )
+        review_period = str(
+            (decision.get("entity_refs") or {}).get("review_period")
+            or (working.get("entities") or {}).get("review_period")
+            or "2026-Q2"
+        )
+        plan_type = (
+            (decision.get("entity_refs") or {}).get("plan_type")
+            or (working.get("metadata") or {}).get("performance_plan_type")
+            or "performance_improvement"
+        )
+        focus_areas = list(
+            (decision.get("entity_refs") or {}).get("focus_areas")
+            or (working.get("analysis_results") or {}).get("skill_gaps")
+            or []
+        )
+        rationale = str(decision.get("rationale") or "Performance review after human approval.")
+        return build_performance_pending_actions(
+            employee_id=employee_id,
+            manager_id=str(manager_id) if manager_id else None,
+            severity=severity if severity in {"development", "concern", "escalation"} else "escalation",
+            rationale=rationale,
+            review_period=review_period,
+            plan_type=str(plan_type) if plan_type else "performance_improvement",
+            focus_areas=focus_areas,
             include_manager_notify=True,
         )
 
@@ -428,6 +474,9 @@ class WorkflowEngine:
         elif str(working.get("workflow_type") or "") == "attendance":
             working = _apply_node_patch(working, attendance_action_agent(working))
             working = _apply_node_patch(working, attendance_response_agent(working))
+        elif str(working.get("workflow_type") or "") == "performance":
+            working = _apply_node_patch(working, performance_action_agent(working))
+            working = _apply_node_patch(working, performance_response_agent(working))
         else:
             working = _apply_node_patch(working, action_agent(working))
             working = _apply_node_patch(working, response_agent(working))

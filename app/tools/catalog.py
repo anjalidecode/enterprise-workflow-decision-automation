@@ -16,6 +16,17 @@ from app.tools.implementations.attendance import (
     UpdateAttendanceStatusTool,
     ValidateAttendancePolicyTool,
 )
+from app.tools.implementations.performance import (
+    CalculatePerformanceSummaryTool,
+    CreateImprovementPlanTool,
+    CreatePerformanceReviewTool,
+    FindPerformanceSupportTool,
+    GetPerformanceGoalsTool,
+    GetPerformancePolicyTool,
+    GetPerformanceRecordsTool,
+    UpdatePerformanceStatusTool,
+    ValidatePerformancePolicyTool,
+)
 from app.tools.implementations.employee import GetEmployeeTool, GetLeaveBalanceTool
 from app.tools.implementations.leave import CalculateLeaveImpactTool, UpdateLeaveBalanceTool
 from app.tools.implementations.notification import NotifyEmployeeTool
@@ -49,7 +60,7 @@ _REGISTRY: ToolRegistry | None = None
 
 
 def build_registry() -> ToolRegistry:
-    """Create a registry with leave, recruitment, onboarding, and attendance tools."""
+    """Create a registry with leave, recruitment, onboarding, attendance, and performance tools."""
 
     registry = ToolRegistry()
     registry.register(GetEmployeeTool())
@@ -86,6 +97,15 @@ def build_registry() -> ToolRegistry:
     registry.register(CreateAttendanceReviewTool())
     registry.register(SendAttendanceWarningTool())
     registry.register(UpdateAttendanceStatusTool())
+    registry.register(GetPerformanceRecordsTool())
+    registry.register(GetPerformanceGoalsTool())
+    registry.register(CalculatePerformanceSummaryTool())
+    registry.register(GetPerformancePolicyTool())
+    registry.register(ValidatePerformancePolicyTool())
+    registry.register(FindPerformanceSupportTool())
+    registry.register(CreatePerformanceReviewTool())
+    registry.register(CreateImprovementPlanTool())
+    registry.register(UpdatePerformanceStatusTool())
     return registry
 
 

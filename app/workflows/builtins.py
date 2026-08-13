@@ -20,6 +20,11 @@ from app.workflows.onboarding_workflow import (
     build_onboarding_workflow,
     run_onboarding_workflow,
 )
+from app.workflows.performance_workflow import (
+    PERFORMANCE_AGENT_NODES,
+    build_performance_workflow,
+    run_performance_workflow,
+)
 from app.workflows.recruitment_workflow import (
     RECRUITMENT_AGENT_NODES,
     build_recruitment_workflow,
@@ -215,6 +220,57 @@ ATTENDANCE_WORKFLOW_SPEC = WorkflowSpec(
     version="1.0",
 )
 
+PERFORMANCE_WORKFLOW_SPEC = WorkflowSpec(
+    workflow_type="performance",
+    name="Employee Performance Management",
+    description=(
+        "Analyze employee performance against goals and KPIs, apply performance "
+        "policy, and recommend review or improvement-plan actions with human "
+        "approval for serious concerns."
+    ),
+    supported_request_hints=[
+        "performance",
+        "performance review",
+        "appraisal",
+        "appraisal review",
+        "kpi",
+        "goal",
+        "performance report",
+        "performance issue",
+        "improvement plan",
+        "performance support",
+    ],
+    required_agents=list(PERFORMANCE_AGENT_NODES),
+    required_tool_capabilities=[
+        "employee.lookup",
+        "performance.records.get",
+        "performance.goals.get",
+        "performance.summary.calculate",
+        "performance.policy.lookup",
+        "performance.policy.validate",
+        "performance.support.find",
+        "performance.review.create",
+        "performance.improvement_plan.create",
+        "performance.status.update",
+        "notification.send",
+    ],
+    memory_profile={
+        "short_term": True,
+        "knowledge": True,
+        "long_term": True,
+        "knowledge_workflow_type": "performance",
+    },
+    entry_node="performance_planner",
+    terminal_statuses=[
+        "completed",
+        "awaiting_human_approval",
+        "validation_failed",
+        "failed",
+    ],
+    approval_outcomes=["pending_approval", "escalate"],
+    version="1.0",
+)
+
 
 def _leave_runner(
     user_request: str,
@@ -320,8 +376,34 @@ def _attendance_runner(
     )
 
 
+def _performance_runner(
+    user_request: str,
+    *,
+    reset_runtime: bool = True,
+    organization_id: str = "",
+    user_id: str = "",
+    initiated_by: str = "",
+    user_role: str = "",
+    request_id: str | None = None,
+    entities: dict[str, Any] | None = None,
+    workflow_type: str = "performance",
+    **_: Any,
+):
+    return run_performance_workflow(
+        user_request,
+        reset_runtime=reset_runtime,
+        organization_id=organization_id,
+        user_id=user_id,
+        initiated_by=initiated_by,
+        user_role=user_role,
+        request_id=request_id,
+        entities=entities,
+        workflow_type=workflow_type,
+    )
+
+
 def register_builtin_workflows(registry: WorkflowRegistry) -> None:
-    """Register leave, recruitment, onboarding, and attendance workflows."""
+    """Register leave, recruitment, onboarding, attendance, and performance workflows."""
 
     registry.register(
         LEAVE_WORKFLOW_SPEC,
@@ -345,5 +427,11 @@ def register_builtin_workflows(registry: WorkflowRegistry) -> None:
         ATTENDANCE_WORKFLOW_SPEC,
         runner=_attendance_runner,
         graph_factory=build_attendance_workflow,
+        validate_tools=True,
+    )
+    registry.register(
+        PERFORMANCE_WORKFLOW_SPEC,
+        runner=_performance_runner,
+        graph_factory=build_performance_workflow,
         validate_tools=True,
     )

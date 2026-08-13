@@ -163,6 +163,22 @@ def main() -> None:
         print(f"  Violations:        {policy.get('violations') or []}")
         print(f"  Warnings:          {policy.get('warnings') or []}")
         print(f"  Issue findings:    {len(analysis.get('issue_findings') or [])}")
+    elif result.get("workflow_type") == "performance":
+        summary = analysis.get("summary") or {}
+        print(f"  Employee:          {employee.get('name', 'n/a')} ({employee.get('employee_id', 'n/a')})")
+        print(f"  Department:        {employee.get('department', analysis.get('department', 'n/a'))}")
+        print(f"  Review period:     {analysis.get('review_period', 'n/a')}")
+        print(f"  Goal achievement:  {summary.get('goal_achievement_pct', analysis.get('goal_achievement_pct', 'n/a'))}%")
+        print(f"  Completed goals:   {summary.get('completed_count', len(analysis.get('completed_goals') or []))}")
+        print(f"  Partial goals:     {summary.get('partial_count', len(analysis.get('partial_goals') or []))}")
+        print(f"  Unmet goals:       {summary.get('unmet_count', len(analysis.get('unmet_goals') or []))}")
+        print(f"  Strengths:         {analysis.get('strengths') or []}")
+        print(f"  Concerns:          {analysis.get('improvement_areas') or []}")
+        print(f"  Skill gaps:        {analysis.get('skill_gaps') or []}")
+        print(f"  Policy:            {policy.get('policy_id', 'n/a')} severity={policy.get('severity')}")
+        print(f"  Violations:        {policy.get('violations') or []}")
+        print(f"  Warnings:          {policy.get('warnings') or []}")
+        print(f"  Support findings:  {len(analysis.get('support_findings') or [])}")
     else:
         print(f"  Employee:          {employee.get('name', 'n/a')} ({employee.get('employee_id', 'n/a')})")
         print(

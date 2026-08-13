@@ -77,6 +77,7 @@ class ToolSelector:
                 "recruitment_action",
                 "onboarding_action",
                 "attendance_action",
+                "performance_action",
             }
             if agent not in write_agents:
                 raise ToolForbiddenError(

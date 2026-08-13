@@ -47,7 +47,7 @@ class GetEmployeeTool(BaseTool):
         category="employee",
         capability="employee.lookup",
         side_effect="read",
-        allowed_agents=["research", "employee_research", "attendance_research"],
+        allowed_agents=["research", "employee_research", "attendance_research", "performance_research"],
         retryable=True,
         max_retries=2,
     )

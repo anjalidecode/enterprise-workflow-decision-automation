@@ -1,0 +1,34 @@
+{
+  "policy_id": "HR-PERF-001",
+  "name": "Employee Performance Management Policy",
+  "version": "1.0",
+  "thresholds": {
+    "strong_min_goal_achievement": 90.0,
+    "development_min_goal_achievement": 70.0,
+    "concern_min_goal_achievement": 50.0,
+    "minimum_goals_required": 1,
+    "completed_goal_min_pct": 90.0,
+    "partial_goal_min_pct": 50.0
+  },
+  "severity": {
+    "strong": "recommend",
+    "development": "ready",
+    "concern": "ready",
+    "escalation": "escalate",
+    "blocked": "blocked"
+  },
+  "rules": {
+    "employee_must_be_active": true,
+    "escalation_requires_human_approval": true,
+    "development_allows_review_and_plan": true,
+    "concern_allows_review_and_plan": true,
+    "no_automatic_disciplinary_action": true,
+    "no_automatic_termination": true,
+    "no_automatic_demotion": true,
+    "no_automatic_salary_change": true,
+    "consider_attendance_signals": false,
+    "high_impact_requires_human_approval": true,
+    "manager_review_role": "manager",
+    "hr_review_role": "hr_admin"
+  }
+}
