@@ -14,6 +14,7 @@ import { useToast } from '../context/ToastContext'
 import type { Workflow } from '../types/api'
 import {
   formatDateTime,
+  describeRecord,
   titleCaseStatus,
   workflowTypeLabel,
 } from '../utils/format'
@@ -114,7 +115,7 @@ export function WorkflowDetailPage() {
           <h1>{workflowTypeLabel(workflow.workflow_type)}</h1>
           <p>
             Agentic workflow run with specialized agents, tools, policy, memory, decision,
-            and human approval checkpoints.
+            and human approval.
           </p>
         </div>
         <div className="split">
@@ -185,7 +186,7 @@ export function WorkflowDetailPage() {
       <div className="panel-grid" style={{ marginBottom: '1rem' }}>
         <div className="card">
           <div className="card-header">
-            <h2>Agents executed</h2>
+            <h2>Specialized agents</h2>
             <span className="badge">{agents.length}</span>
           </div>
           <div className="card-body">
@@ -295,7 +296,7 @@ export function WorkflowDetailPage() {
             ) : (
               <ul>
                 {workflow.actions.map((action, index) => (
-                  <li key={index}>{JSON.stringify(action)}</li>
+                  <li key={index}>{describeRecord(action)}</li>
                 ))}
               </ul>
             )}
@@ -307,7 +308,7 @@ export function WorkflowDetailPage() {
             ) : (
               <ul>
                 {workflow.pending_actions.map((action, index) => (
-                  <li key={index}>{JSON.stringify(action)}</li>
+                  <li key={index}>{describeRecord(action)}</li>
                 ))}
               </ul>
             )}
@@ -359,7 +360,8 @@ export function WorkflowDetailPage() {
         }
       >
         <p className="muted" style={{ marginBottom: '0.75rem' }}>
-          This calls the backend approval API. The WorkflowEngine remains authoritative.
+          This confirms a high-impact approval action. The server remains the source of
+          truth.
         </p>
         <div className="form-row">
           <label htmlFor="approval-reason">Reason (optional)</label>

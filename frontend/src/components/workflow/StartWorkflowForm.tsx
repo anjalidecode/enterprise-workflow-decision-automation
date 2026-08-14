@@ -21,7 +21,7 @@ type Props = {
 export function StartWorkflowForm({
   defaultWorkflowType,
   title = 'Start workflow',
-  description = 'Submit a structured HR request. The backend WorkflowEngine routes and executes specialized agents — this is not a chatbot.',
+  description = 'Submit a structured HR request. Specialized agents execute the workflow — this is not a chat interface.',
   placeholder = 'Describe the HR request…',
   lockedType = false,
 }: Props) {
@@ -146,7 +146,7 @@ export function StartWorkflowForm({
               ) : null}
             </select>
             <span className="form-hint">
-              Optional explicit type. Identity and organization come from your JWT.
+              Optional explicit type. Your identity comes from the signed-in session.
             </span>
           </div>
           <div className="form-row">
@@ -185,7 +185,7 @@ export function StartWorkflowForm({
         <div className="card card-body">
           <div className="spinner" aria-hidden />
           <p className="muted" style={{ textAlign: 'center' }}>
-            Specialized agents are collaborating through WorkflowState…
+            Specialized agents are collaborating on this request…
           </p>
         </div>
       ) : null}

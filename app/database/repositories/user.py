@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.auth.models import Role, User
@@ -41,6 +41,14 @@ class UserRepository:
     def get_auth_user_by_id(self, user_id: str) -> User | None:
         record = self.get_by_user_id(user_id)
         return to_auth_user(record) if record else None
+
+    def count_by_organization(self, organization_id: str) -> int:
+        stmt = (
+            select(func.count())
+            .select_from(UserRecord)
+            .where(UserRecord.organization_id == organization_id)
+        )
+        return int(self._session.scalar(stmt) or 0)
 
     def create(
         self,

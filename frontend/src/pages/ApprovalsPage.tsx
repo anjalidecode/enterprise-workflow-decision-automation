@@ -119,8 +119,7 @@ export function ApprovalsPage() {
                       {item.workflow_id}
                     </Link>
                     <div className="muted" style={{ marginTop: '0.35rem', fontSize: '0.85rem' }}>
-                      Requested by: unavailable from list API · Created{' '}
-                      {formatDateTime(item.created_at)}
+                      Requested {formatDateTime(item.created_at)}
                     </div>
                   </div>
                   <StatusBadge status={item.status} />

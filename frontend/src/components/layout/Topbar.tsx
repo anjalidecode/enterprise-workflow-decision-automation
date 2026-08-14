@@ -1,3 +1,4 @@
+import { BrandMark } from '../Brand'
 import { useAuth } from '../../context/AuthContext'
 import { roleLabel } from '../../utils/rbac'
 import { Button } from '../ui/Primitives'
@@ -25,11 +26,9 @@ export function Topbar({ pendingApprovals, onToggleSidebar }: Props) {
           ☰
         </button>
         <div className="brand">
-          <div className="brand-mark" aria-hidden>
-            EW
-          </div>
+          <BrandMark size={32} />
           <div className="brand-text">
-            <div className="brand-name">Enterprise Workflow HR</div>
+            <div className="brand-name">WorkSphere AI</div>
             <div className="brand-org">{user.organization_id}</div>
           </div>
         </div>
@@ -40,9 +39,15 @@ export function Topbar({ pendingApprovals, onToggleSidebar }: Props) {
           className="user-chip"
           title={pendingApprovals > 0 ? `${pendingApprovals} items need attention` : 'No alerts'}
         >
-          <span className="notification-dot" aria-hidden={pendingApprovals === 0} />
+          <span
+            className="notification-dot"
+            aria-hidden={pendingApprovals === 0}
+            data-active={pendingApprovals > 0}
+          />
           <span className="muted" style={{ fontSize: '0.78rem' }}>
-            {pendingApprovals > 0 ? `${pendingApprovals} alert${pendingApprovals === 1 ? '' : 's'}` : 'Clear'}
+            {pendingApprovals > 0
+              ? `${pendingApprovals} alert${pendingApprovals === 1 ? '' : 's'}`
+              : 'No alerts'}
           </span>
         </div>
         <div className="user-chip">

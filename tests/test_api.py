@@ -406,6 +406,7 @@ def test_openapi_docs_available(client: TestClient) -> None:
     assert "/api/v1/health" in paths
     assert "/api/v1/workflows/run" in paths
     assert "/api/v1/auth/login" in paths
+    assert "/api/v1/auth/register" in paths
     schemes = openapi.json()["components"]["securitySchemes"]
     assert "BearerAuth" in schemes
 

@@ -128,3 +128,21 @@ export function inferStageStatus(
   if (matchedAgent) return 'done'
   return 'pending'
 }
+
+export function describeRecord(item: Record<string, unknown>): string {
+  const title = String(
+    item.name ||
+      item.tool ||
+      item.tool_name ||
+      item.agent ||
+      item.agent_name ||
+      item.type ||
+      item.action ||
+      item.store ||
+      item.memory_type ||
+      '',
+  )
+  const status = item.status ? String(item.status) : ''
+  const extra = String(item.summary || item.message || item.operation || item.key || '')
+  return [title, status, extra].filter(Boolean).join(' · ') || 'Recorded step'
+}

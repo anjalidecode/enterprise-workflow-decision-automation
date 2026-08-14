@@ -343,6 +343,8 @@ def test_openapi_bearer_security(client: TestClient) -> None:
     assert openapi["security"] == [{"BearerAuth": []}]
     login = openapi["paths"]["/api/v1/auth/login"]["post"]
     assert login.get("security") == []
+    register = openapi["paths"]["/api/v1/auth/register"]["post"]
+    assert register.get("security") == []
 
 
 def test_password_hashes_never_returned(client: TestClient) -> None:
@@ -367,3 +369,98 @@ def test_protected_routes_require_auth(client: TestClient) -> None:
         ).status_code
         == 401
     )
+
+
+def _register_payload(**overrides: object) -> dict:
+    body: dict = {
+        "full_name": "Alex Rivera",
+        "email": "alex.rivera@northwind.test",
+        "password": "securePass-123",
+        "confirm_password": "securePass-123",
+        "organization_name": "Northwind HR",
+        "role": "admin",
+        "organization_id": "spoof-org",
+        "employee_id": "E999",
+        "user_role": "hr",
+    }
+    body.update(overrides)
+    return body
+
+
+def test_register_first_org_user_becomes_admin(client: TestClient) -> None:
+    response = client.post("/api/v1/auth/register", json=_register_payload())
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["message"] == "Account created successfully."
+    assert body["user"]["username"] == "alex.rivera@northwind.test"
+    assert body["user"]["role"] == "admin"
+    assert body["user"]["organization_id"] == "northwind-hr"
+    assert body["user"]["employee_id"] is None
+    assert "password" not in body
+    assert "password_hash" not in body["user"]
+    assert "securePass-123" not in response.text
+    assert "$2" not in response.text
+
+    login = _login(client, "alex.rivera@northwind.test", password="securePass-123")
+    assert login.status_code == 200
+    token = login.json()["access_token"]
+    me = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
+    assert me.status_code == 200
+    assert me.json()["role"] == "admin"
+    assert me.json()["organization_id"] == "northwind-hr"
+
+    with session_scope() as session:
+        stored = UserRepository(session).get_auth_user_by_username(
+            "alex.rivera@northwind.test"
+        )
+    assert stored is not None
+    assert stored.role.value == "admin"
+    assert stored.password_hash != "securePass-123"
+
+
+def test_register_existing_organization_is_employee(client: TestClient) -> None:
+    first = client.post("/api/v1/auth/register", json=_register_payload())
+    assert first.status_code == 200, first.text
+    second = client.post(
+        "/api/v1/auth/register",
+        json=_register_payload(
+            full_name="Sam Lee",
+            email="sam.lee@northwind.test",
+            role="admin",
+        ),
+    )
+    assert second.status_code == 200, second.text
+    assert second.json()["user"]["role"] == "employee"
+    assert second.json()["user"]["organization_id"] == "northwind-hr"
+
+
+def test_register_duplicate_email(client: TestClient) -> None:
+    assert client.post("/api/v1/auth/register", json=_register_payload()).status_code == 200
+    again = client.post("/api/v1/auth/register", json=_register_payload())
+    assert again.status_code == 409
+    assert again.json()["error"]["code"] == "ACCOUNT_EXISTS"
+
+
+def test_register_password_mismatch(client: TestClient) -> None:
+    response = client.post(
+        "/api/v1/auth/register",
+        json=_register_payload(confirm_password="different-pass-1"),
+    )
+    assert response.status_code == 400
+    assert "match" in response.json()["error"]["message"].lower()
+
+
+def test_register_invalid_email(client: TestClient) -> None:
+    response = client.post(
+        "/api/v1/auth/register",
+        json=_register_payload(email="not-an-email"),
+    )
+    assert response.status_code == 400
+
+
+def test_register_weak_password(client: TestClient) -> None:
+    response = client.post(
+        "/api/v1/auth/register",
+        json=_register_payload(password="short", confirm_password="short"),
+    )
+    assert response.status_code == 400

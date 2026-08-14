@@ -88,9 +88,8 @@ export function EmployeesPage() {
           </div>
           <h1>Employees</h1>
           <p>
-            A dedicated employees directory API is not available in Module 5C. This page
-            shows authenticated context and recent org workflow activity instead of fake
-            employee records.
+            Workforce activity from workflow records your role is allowed to view. A
+            dedicated employee directory is not exposed by the current API.
           </p>
         </div>
         <Button variant="primary" onClick={() => void load()} disabled={loading}>
@@ -100,12 +99,11 @@ export function EmployeesPage() {
 
       <div className="card" style={{ marginBottom: '1rem' }}>
         <div className="card-header">
-          <h2>API limitation</h2>
+          <h2>Directory</h2>
         </div>
         <div className="card-body muted">
-          Missing endpoint: <code>GET /api/v1/employees</code>. Department and employment
-          status fields are therefore unavailable. Use workflow runs for operational
-          visibility.
+          Employee name, department, and employment status are not returned by the
+          current API. Recent workflow activity is shown instead of a synthetic roster.
         </div>
       </div>
 

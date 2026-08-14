@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     api_host: str = "127.0.0.1"
     api_port: int = 8000
     # Comma-separated origins for CORS. Do not use "*" in non-dev unless intentional.
-    cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173"
+    cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173"
 
     # JWT — never hardcode a production secret; set JWT_SECRET_KEY in the environment.
     jwt_secret_key: str = ""

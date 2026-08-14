@@ -64,9 +64,8 @@ export function AuditPage() {
           </div>
           <h1>Audit trail</h1>
           <p>
-            Understandable audit snapshots from workflow runs: agents, tools, memory,
-            decisions, actions, and timestamps. There is no standalone global audit feed
-            endpoint — this page aggregates authorized workflow audit data.
+            Audit snapshots from workflow runs: agents, tools, memory, decisions, actions,
+            and timestamps.
           </p>
         </div>
         <Button variant="primary" onClick={() => void load()} disabled={loading}>

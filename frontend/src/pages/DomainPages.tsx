@@ -93,8 +93,8 @@ export function DomainWorkflowPage({ domainKey }: { domainKey: keyof typeof DOMA
         title={`Start ${config.pathLabel.toLowerCase()} workflow`}
         description={
           user?.role === 'employee'
-            ? 'Self-service request. The backend enforces employee ownership rules.'
-            : 'Enterprise request form backed by WorkflowEngine — not a chat interface.'
+            ? 'Submit a self-service request. Access is limited to your own employee record.'
+            : 'Structured request form — specialized agents execute the workflow on the server.'
         }
         placeholder={config.placeholder}
       />
@@ -125,4 +125,35 @@ export function OffboardingPage() {
 }
 export function HrServicesPage() {
   return <DomainWorkflowPage domainKey="hr-services" />
+}
+
+export function RequestsPage() {
+  const { user } = useAuth()
+  return (
+    <div>
+      <div className="page-header">
+        <div>
+          <div className="breadcrumbs">
+            <Link to="/dashboard">Home</Link>
+            <span>/</span>
+            <span>My Requests</span>
+          </div>
+          <h1>My Requests</h1>
+          <p>
+            Start a new HR request. WorkSphere AI routes it through specialized agents,
+            policy checks, and human approval when required.
+          </p>
+        </div>
+      </div>
+      <StartWorkflowForm
+        title="Start new workflow"
+        description={
+          user?.role === 'employee'
+            ? 'Self-service requests only. Privileged workflow types are not available to employees.'
+            : 'Select a workflow type and describe the request.'
+        }
+        placeholder="Describe the request, for example: Check whether I can take 3 days of leave next week."
+      />
+    </div>
+  )
 }

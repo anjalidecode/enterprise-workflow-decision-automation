@@ -3,6 +3,7 @@
 
 # Environment variables
 .env
+frontend/.env
 
 # Local user-space PostgreSQL data (development only)
 .pgdata/

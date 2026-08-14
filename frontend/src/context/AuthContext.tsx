@@ -21,7 +21,7 @@ type AuthContextValue = {
   token: string | null
   isAuthenticated: boolean
   loading: boolean
-  login: (username: string, password: string) => Promise<void>
+  login: (username: string, password: string, remember?: boolean) => Promise<void>
   logout: () => void
   refreshUser: () => Promise<void>
 }
@@ -84,9 +84,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  const login = useCallback(async (username: string, password: string) => {
+  const login = useCallback(async (username: string, password: string, remember = true) => {
     const result = await authApi.login({ username, password })
-    setStoredToken(result.access_token)
+    setStoredToken(result.access_token, remember)
     setToken(result.access_token)
     setUser(result.user)
   }, [])

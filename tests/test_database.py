@@ -376,7 +376,8 @@ def test_database_unavailable_behavior(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_database_not_configured(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.delenv("DATABASE_URL", raising=False)
+    # Empty string overrides .env so local developer DATABASE_URL cannot mask this case.
+    monkeypatch.setenv("DATABASE_URL", "")
     get_settings.cache_clear()
     reset_engine()
     with pytest.raises(DatabaseNotConfiguredError):

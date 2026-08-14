@@ -10,7 +10,7 @@ import {
   shortId,
   workflowTypeLabel,
 } from '../utils/format'
-import { canApprove, roleLabel } from '../utils/rbac'
+import { canApprove, canRunWorkflowType } from '../utils/rbac'
 
 export function DashboardPage() {
   const { user } = useAuth()
@@ -98,17 +98,10 @@ export function DashboardPage() {
             <span>/</span>
             <span>Dashboard</span>
           </div>
-          <h1>
-            {user?.role === 'employee'
-              ? 'My dashboard'
-              : user?.role === 'hr'
-                ? 'HR dashboard'
-                : 'Operations dashboard'}
-          </h1>
+          <h1>WorkSphere AI</h1>
           <p>
-            Signed in as {user?.username} ({roleLabel(user?.role || 'employee')}) ·{' '}
-            {user?.organization_id}. Metrics below are computed from workflow runs returned
-            by the API — no invented statistics.
+            Operational view of workflows you are authorized to see. Figures come from
+            live workflow records — not estimates.
           </p>
         </div>
         <Button variant="primary" onClick={() => void load()}>
@@ -142,6 +135,35 @@ export function DashboardPage() {
           <div className="label">Active HR processes</div>
           <div className="value">{stats.activeTypes}</div>
           <div className="hint">Distinct workflow types</div>
+        </div>
+      </div>
+
+      <div className="card" style={{ marginBottom: '1.25rem' }}>
+        <div className="card-header">
+          <h2>Quick actions</h2>
+        </div>
+        <div className="card-body split">
+          {canRunWorkflowType(user?.role || 'employee', 'leave_attendance') ? (
+            <Link to="/leave">
+              <Button variant="secondary">Start leave workflow</Button>
+            </Link>
+          ) : null}
+          {canRunWorkflowType(user?.role || 'employee', 'recruitment') ? (
+            <Link to="/recruitment">
+              <Button variant="secondary">Start recruitment</Button>
+            </Link>
+          ) : null}
+          {canRunWorkflowType(user?.role || 'employee', 'onboarding') &&
+          user?.role !== 'employee' ? (
+            <Link to="/onboarding">
+              <Button variant="secondary">Start onboarding</Button>
+            </Link>
+          ) : null}
+          {user?.role === 'employee' ? (
+            <Link to="/requests">
+              <Button variant="primary">New request</Button>
+            </Link>
+          ) : null}
         </div>
       </div>
 

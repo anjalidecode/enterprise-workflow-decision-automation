@@ -1,6 +1,6 @@
-# Enterprise Workflow HR Frontend (Module 5D)
+# WorkSphere AI
 
-React + TypeScript + Vite application that consumes the existing FastAPI backend.
+React + TypeScript + Vite frontend for **WorkSphere AI** — AI-Powered HR Workflow & Decision Automation.
 
 ## Setup
 
@@ -24,6 +24,6 @@ Open http://127.0.0.1:5173
 
 ## Environment
 
-`VITE_API_BASE_URL` must point at the FastAPI v1 prefix, e.g. `http://127.0.0.1:8000/api/v1`.
+`VITE_API_BASE_URL` must point at the API v1 prefix, e.g. `http://127.0.0.1:8000/api/v1`.
 
 Do not commit `frontend/.env`.

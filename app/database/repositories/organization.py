@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.database.models.organization import Organization
@@ -14,6 +14,13 @@ class OrganizationRepository:
 
     def get_by_organization_id(self, organization_id: str) -> Organization | None:
         stmt = select(Organization).where(Organization.organization_id == organization_id)
+        return self._session.scalars(stmt).first()
+
+    def get_by_name(self, name: str) -> Organization | None:
+        key = name.strip().lower()
+        if not key:
+            return None
+        stmt = select(Organization).where(func.lower(Organization.name) == key)
         return self._session.scalars(stmt).first()
 
     def create(

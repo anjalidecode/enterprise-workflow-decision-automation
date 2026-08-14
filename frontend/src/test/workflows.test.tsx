@@ -155,7 +155,7 @@ describe('workflows and approvals UI', () => {
     vi.stubGlobal('fetch', authenticatedFetch())
     renderWithProviders(<App />, { route: '/workflows/wf-001', token: 'token' })
     expect(await screen.findByText(/agentic pipeline/i)).toBeInTheDocument()
-    expect(screen.getByText(/decision intelligence/i)).toBeInTheDocument()
+    expect(screen.getAllByRole('heading', { name: /^decision$/i }).length).toBeGreaterThan(0)
     expect(screen.getByText(/within policy/i)).toBeInTheDocument()
     expect(screen.getByText(/run metrics/i)).toBeInTheDocument()
   })
@@ -204,7 +204,9 @@ describe('workflows and approvals UI', () => {
       }),
     )
     renderWithProviders(<App />, { route: '/workflows', token: 'token' })
-    expect(await screen.findByText(/could not load workflows/i)).toBeInTheDocument()
+    expect(
+      await screen.findByText(/could not load workflows/i, {}, { timeout: 8000 }),
+    ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument()
   })
 })

@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { getApiBaseUrl } from '../api/client'
 import { roleLabel } from '../utils/rbac'
 
 export function SettingsPage() {
@@ -16,7 +15,7 @@ export function SettingsPage() {
             <span>Settings</span>
           </div>
           <h1>Settings</h1>
-          <p>Session and environment information for this development frontend.</p>
+          <p>Profile and session for your WorkSphere AI workspace.</p>
         </div>
       </div>
 
@@ -50,16 +49,13 @@ export function SettingsPage() {
 
         <div className="card">
           <div className="card-header">
-            <h2>API configuration</h2>
+            <h2>Workspace</h2>
           </div>
           <div className="card-body stack-sm">
-            <div className="metric-row">
-              <span className="muted">API base URL</span>
-              <strong className="mono">{getApiBaseUrl()}</strong>
-            </div>
             <p className="muted">
-              Configured via <code>VITE_API_BASE_URL</code>. JWT secrets and database
-              credentials never appear in the frontend.
+              Role changes and organization administration are controlled by authorized
+              administrators. This application never stores secrets in the browser beyond
+              your session token.
             </p>
           </div>
         </div>

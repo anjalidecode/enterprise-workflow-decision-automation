@@ -104,7 +104,11 @@ def create_app() -> FastAPI:
         # Keep health + login explicitly public in OpenAPI.
         paths = schema.get("paths", {})
         for path_key, methods in paths.items():
-            if path_key.endswith("/health") or path_key.endswith("/auth/login"):
+            if (
+                path_key.endswith("/health")
+                or path_key.endswith("/auth/login")
+                or path_key.endswith("/auth/register")
+            ):
                 for method_spec in methods.values():
                     if isinstance(method_spec, dict):
                         method_spec["security"] = []

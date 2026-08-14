@@ -26,18 +26,19 @@ const TOKEN_KEY = 'ewda_access_token'
 
 export function getStoredToken(): string | null {
   try {
-    return localStorage.getItem(TOKEN_KEY)
+    return localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY)
   } catch {
     return null
   }
 }
 
-export function setStoredToken(token: string | null): void {
+export function setStoredToken(token: string | null, remember = true): void {
   try {
+    localStorage.removeItem(TOKEN_KEY)
+    sessionStorage.removeItem(TOKEN_KEY)
     if (token) {
-      localStorage.setItem(TOKEN_KEY, token)
-    } else {
-      localStorage.removeItem(TOKEN_KEY)
+      const store = remember ? localStorage : sessionStorage
+      store.setItem(TOKEN_KEY, token)
     }
   } catch {
     // ignore storage failures in restricted environments

@@ -1,10 +1,12 @@
 import { NavLink } from 'react-router-dom'
+import { BrandMark } from '../Brand'
 import { useAuth } from '../../context/AuthContext'
-import { navForRole } from '../../utils/rbac'
+import { navForRole, navLabel } from '../../utils/rbac'
 
 const ICONS: Record<string, string> = {
   dashboard: '▣',
   workflows: '⇄',
+  requests: '✎',
   approvals: '✓',
   employees: '👤',
   leave: '◷',
@@ -16,6 +18,7 @@ const ICONS: Record<string, string> = {
   offboarding: '↘',
   services: '☰',
   audit: '◉',
+  analytics: '▦',
   settings: '⚙',
 }
 
@@ -26,7 +29,14 @@ export function Sidebar({ open }: { open: boolean }) {
 
   return (
     <aside className="sidebar" aria-label="Primary" data-open={open}>
-      <div className="nav-section-label">Operations</div>
+      <div className="sidebar-brand">
+        <BrandMark size={28} />
+        <div>
+          <div className="sidebar-product">WorkSphere AI</div>
+          <div className="sidebar-org">{user.organization_id}</div>
+        </div>
+      </div>
+      <div className="nav-section-label">Workspace</div>
       <nav>
         {items.map((item) => (
           <NavLink
@@ -35,7 +45,7 @@ export function Sidebar({ open }: { open: boolean }) {
             className={({ isActive }) => `nav-link${isActive ? ' active' : ''}`}
           >
             <span aria-hidden>{ICONS[item.icon] || '•'}</span>
-            <span>{item.label}</span>
+            <span>{navLabel(item, user.role)}</span>
           </NavLink>
         ))}
       </nav>

@@ -3,6 +3,7 @@ import type {
   ApprovalRequest,
   HealthResponse,
   LoginRequest,
+  RegisterRequest,
   TokenResponse,
   User,
   Workflow,
@@ -16,6 +17,13 @@ import type {
 export const authApi = {
   login(body: LoginRequest): Promise<TokenResponse> {
     return apiRequest<TokenResponse>('/auth/login', {
+      method: 'POST',
+      body,
+      token: null,
+    })
+  },
+  register(body: RegisterRequest): Promise<{ message: string; user: User }> {
+    return apiRequest<{ message: string; user: User }>('/auth/register', {
       method: 'POST',
       body,
       token: null,

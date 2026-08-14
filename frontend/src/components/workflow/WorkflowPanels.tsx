@@ -60,7 +60,7 @@ export function WorkflowTimeline({
                 {related
                   ? `${agentLabel(related)} — ${agentDetail(related)}`
                   : status === 'active'
-                    ? 'Currently executing in the WorkflowEngine pipeline.'
+                    ? 'Currently executing this stage.'
                     : status === 'done'
                       ? 'Stage completed.'
                       : 'Awaiting upstream stages.'}
@@ -89,7 +89,7 @@ export function DecisionPanel({ workflow }: { workflow: Workflow }) {
   return (
     <div className="card">
       <div className="card-header">
-        <h3>Decision intelligence</h3>
+        <h3>Decision</h3>
         <StatusBadge status={decision.outcome || 'pending'} />
       </div>
       <div className="card-body stack-sm">

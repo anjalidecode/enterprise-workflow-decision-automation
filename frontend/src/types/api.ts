@@ -1,4 +1,4 @@
-/** TypeScript types mirroring FastAPI OpenAPI schemas (Module 5A–5C). */
+/** TypeScript types mirroring the backend API schemas. */
 
 export type Role = 'employee' | 'manager' | 'hr' | 'admin'
 
@@ -31,6 +31,14 @@ export interface TokenResponse {
 export interface LoginRequest {
   username: string
   password: string
+}
+
+export interface RegisterRequest {
+  full_name: string
+  email: string
+  password: string
+  confirm_password: string
+  organization_name: string
 }
 
 export interface WorkflowDecision {

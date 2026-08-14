@@ -5,6 +5,7 @@ export type NavItem = {
   label: string
   roles: Role[]
   icon: string
+  labels?: Partial<Record<Role, string>>
 }
 
 /** Frontend visibility only — backend RBAC remains authoritative. */
@@ -18,8 +19,15 @@ export const NAV_ITEMS: NavItem[] = [
   {
     to: '/workflows',
     label: 'Workflows',
+    labels: { employee: 'My Workflows', manager: 'Team Workflows' },
     roles: ['employee', 'manager', 'hr', 'admin'],
     icon: 'workflows',
+  },
+  {
+    to: '/requests',
+    label: 'My Requests',
+    roles: ['employee'],
+    icon: 'requests',
   },
   {
     to: '/approvals',
@@ -36,12 +44,14 @@ export const NAV_ITEMS: NavItem[] = [
   {
     to: '/leave',
     label: 'Leave',
+    labels: { employee: 'My Leave' },
     roles: ['employee', 'manager', 'hr', 'admin'],
     icon: 'leave',
   },
   {
     to: '/attendance',
     label: 'Attendance',
+    labels: { employee: 'My Attendance' },
     roles: ['employee', 'manager', 'hr', 'admin'],
     icon: 'attendance',
   },
@@ -54,7 +64,7 @@ export const NAV_ITEMS: NavItem[] = [
   {
     to: '/onboarding',
     label: 'Onboarding',
-    roles: ['employee', 'manager', 'hr', 'admin'],
+    roles: ['manager', 'hr', 'admin'],
     icon: 'onboarding',
   },
   {
@@ -66,6 +76,7 @@ export const NAV_ITEMS: NavItem[] = [
   {
     to: '/training',
     label: 'Training',
+    labels: { employee: 'My Training' },
     roles: ['employee', 'manager', 'hr', 'admin'],
     icon: 'training',
   },
@@ -88,6 +99,12 @@ export const NAV_ITEMS: NavItem[] = [
     icon: 'audit',
   },
   {
+    to: '/analytics',
+    label: 'Analytics',
+    roles: ['manager', 'hr', 'admin'],
+    icon: 'analytics',
+  },
+  {
     to: '/settings',
     label: 'Settings',
     roles: ['employee', 'manager', 'hr', 'admin'],
@@ -105,6 +122,10 @@ export const EMPLOYEE_ALLOWED_WORKFLOW_TYPES: WorkflowType[] = [
 ]
 
 export const APPROVER_ROLES: Role[] = ['manager', 'hr', 'admin']
+
+export function navLabel(item: NavItem, role: Role): string {
+  return item.labels?.[role] || item.label
+}
 
 export function navForRole(role: Role): NavItem[] {
   return NAV_ITEMS.filter((item) => item.roles.includes(role))

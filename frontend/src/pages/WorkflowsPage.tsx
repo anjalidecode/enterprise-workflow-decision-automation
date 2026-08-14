@@ -76,8 +76,8 @@ export function WorkflowsPage() {
           </div>
           <h1>Workflows</h1>
           <p>
-            Persisted workflow runs for your organization, filtered by role ownership rules
-            on the backend.
+            Persisted workflow runs for your organization, limited to what your role may
+            view.
           </p>
         </div>
         <Button variant="primary" onClick={() => void load()} disabled={loading}>
@@ -156,6 +156,8 @@ export function WorkflowsPage() {
                   <th>Approval</th>
                   <th>Organization</th>
                   <th>Created</th>
+                  <th>Duration</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
@@ -180,6 +182,10 @@ export function WorkflowsPage() {
                     </td>
                     <td>{w.organization_id || '—'}</td>
                     <td>{formatDateTime(w.created_at)}</td>
+                    <td>—</td>
+                    <td>
+                      <Link to={`/workflows/${w.workflow_id}`}>Open</Link>
+                    </td>
                   </tr>
                 ))}
               </tbody>
