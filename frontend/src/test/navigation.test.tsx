@@ -31,6 +31,7 @@ describe('authenticated navigation by role', () => {
     expect(screen.getByRole('link', { name: /my requests/i })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /approvals/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /employees/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: /user management/i })).not.toBeInTheDocument()
   }, 15000)
 
   it('manager sidebar', async () => {
@@ -58,5 +59,6 @@ describe('authenticated navigation by role', () => {
     expect(screen.getByRole('link', { name: /settings/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /approvals/i })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: /employees/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /user management/i })).toBeInTheDocument()
   }, 15000)
 })

@@ -10,6 +10,8 @@ import { EmployeesPage } from './pages/EmployeesPage'
 import { AuditPage } from './pages/AuditPage'
 import { AnalyticsPage } from './pages/AnalyticsPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { UsersPage } from './pages/UsersPage'
+import { ActivatePage } from './pages/ActivatePage'
 import {
   AttendancePage,
   HrServicesPage,
@@ -29,6 +31,7 @@ export default function App() {
       <Route element={<PublicOnlyRoute />}>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/activate" element={<ActivatePage />} />
       </Route>
 
       <Route element={<ProtectedRoute />}>
@@ -52,6 +55,12 @@ export default function App() {
           <Route path="/approvals" element={<ApprovalsPage />} />
           <Route path="/recruitment" element={<RecruitmentPage />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
+        </Route>
+      </Route>
+
+      <Route element={<ProtectedRoute roles={['admin']} />}>
+        <Route element={<AppLayout />}>
+          <Route path="/users" element={<UsersPage />} />
         </Route>
       </Route>
 

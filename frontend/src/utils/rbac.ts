@@ -42,6 +42,12 @@ export const NAV_ITEMS: NavItem[] = [
     icon: 'employees',
   },
   {
+    to: '/users',
+    label: 'User Management',
+    roles: ['admin'],
+    icon: 'users',
+  },
+  {
     to: '/leave',
     label: 'Leave',
     labels: { employee: 'My Leave' },
@@ -129,6 +135,10 @@ export function navLabel(item: NavItem, role: Role): string {
 
 export function navForRole(role: Role): NavItem[] {
   return NAV_ITEMS.filter((item) => item.roles.includes(role))
+}
+
+export function canManageUsers(role: Role): boolean {
+  return role === 'admin'
 }
 
 export function canApprove(role: Role): boolean {

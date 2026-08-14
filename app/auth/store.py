@@ -7,7 +7,7 @@ Passwords are stored only as bcrypt hashes — never plaintext.
 
 from __future__ import annotations
 
-from app.auth.models import Role, User
+from app.auth.models import Role, User, UserStatus
 from app.auth.security import hash_password
 
 # Documented development password for all demo users (not a production secret).
@@ -33,6 +33,7 @@ def _user(
     employee_id: str | None = None,
     is_active: bool = True,
     password_hash: str | None = None,
+    full_name: str | None = None,
 ) -> User:
     return User(
         user_id=user_id,
@@ -42,6 +43,8 @@ def _user(
         role=role,
         employee_id=employee_id,
         is_active=is_active,
+        full_name=full_name,
+        status=UserStatus.ACTIVE if is_active else UserStatus.INACTIVE,
     )
 
 
@@ -77,6 +80,7 @@ def build_demo_users() -> list[User]:
             role=Role.EMPLOYEE,
             employee_id="E001",
             password_hash=hashed,
+            full_name="Demo Employee",
         ),
         _user(
             user_id="user-manager-001",
@@ -85,6 +89,7 @@ def build_demo_users() -> list[User]:
             role=Role.MANAGER,
             employee_id="E100",
             password_hash=hashed,
+            full_name="Demo Manager",
         ),
         _user(
             user_id="user-hr-001",
@@ -93,6 +98,7 @@ def build_demo_users() -> list[User]:
             role=Role.HR,
             employee_id=None,
             password_hash=hashed,
+            full_name="Demo HR",
         ),
         _user(
             user_id="user-admin-001",
@@ -101,6 +107,7 @@ def build_demo_users() -> list[User]:
             role=Role.ADMIN,
             employee_id=None,
             password_hash=hashed,
+            full_name="Demo Admin",
         ),
         _user(
             user_id="user-inactive-001",
@@ -110,6 +117,7 @@ def build_demo_users() -> list[User]:
             employee_id="E099",
             is_active=False,
             password_hash=hashed,
+            full_name="Inactive Employee",
         ),
         _user(
             user_id="user-employee-other",
@@ -118,6 +126,7 @@ def build_demo_users() -> list[User]:
             role=Role.EMPLOYEE,
             employee_id="E050",
             password_hash=hashed,
+            full_name="Other Org Employee",
         ),
         _user(
             user_id="user-hr-other",
@@ -126,6 +135,7 @@ def build_demo_users() -> list[User]:
             role=Role.HR,
             employee_id=None,
             password_hash=hashed,
+            full_name="Other Org HR",
         ),
     ]
 

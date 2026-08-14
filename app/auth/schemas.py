@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from app.auth.models import Role
+from app.auth.models import Role, UserStatus
 
 
 class LoginRequest(BaseModel):
@@ -65,6 +65,8 @@ class UserPublic(BaseModel):
     organization_id: str
     role: Role
     employee_id: str | None = None
+    full_name: str | None = None
+    status: UserStatus = UserStatus.ACTIVE
 
 
 class RegisterResponse(BaseModel):
@@ -77,3 +79,84 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     expires_in: int
     user: UserPublic
+
+
+class InviteUserRequest(BaseModel):
+    """Admin invite body. organization_id from the client is ignored."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    full_name: str = Field(..., min_length=1)
+    email: str = Field(..., min_length=3)
+    role: Role
+
+    @field_validator("full_name")
+    @classmethod
+    def required_name(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("must be a non-empty string")
+        return cleaned
+
+    @field_validator("email")
+    @classmethod
+    def email_not_blank(cls, value: str) -> str:
+        cleaned = value.strip().lower()
+        if not cleaned:
+            raise ValueError("must be a non-empty string")
+        return cleaned
+
+
+class PatchUserRequest(BaseModel):
+    """Admin user update. organization_id and user identity from the body are ignored."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    role: Role | None = None
+
+
+class ActivateAccountRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    token: str = Field(..., min_length=8)
+    password: str = Field(..., min_length=1)
+    confirm_password: str = Field(..., min_length=1)
+
+    @field_validator("token")
+    @classmethod
+    def token_not_blank(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("must be a non-empty string")
+        return cleaned
+
+
+class InvitationInfo(BaseModel):
+    expires_at: str
+    activation_path: str
+    activation_token: str
+
+
+class ManagedUserPublic(BaseModel):
+    user_id: str
+    username: str
+    full_name: str | None = None
+    organization_id: str
+    role: Role
+    employee_id: str | None = None
+    status: UserStatus
+    is_active: bool
+    created_at: str | None = None
+
+
+class UserListResponse(BaseModel):
+    users: list[ManagedUserPublic]
+    total: int
+    limit: int
+    offset: int
+
+
+class InviteUserResponse(BaseModel):
+    message: str
+    user: ManagedUserPublic
+    invitation: InvitationInfo

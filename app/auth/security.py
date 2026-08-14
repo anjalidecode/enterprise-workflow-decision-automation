@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import hashlib
+import hmac
+import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -61,6 +64,33 @@ def create_access_token(
         algorithm=cfg.jwt_algorithm,
     )
     return token, expires_in
+
+
+def generate_invite_token() -> str:
+    """High-entropy one-time invitation token. Never log or store the raw value."""
+
+    return secrets.token_urlsafe(32)
+
+
+def hash_invite_token(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def invite_tokens_match(raw_token: str, stored_hash: str) -> bool:
+    expected = hash_invite_token(raw_token)
+    return hmac.compare_digest(expected, stored_hash)
+
+
+_UNUSABLE_PASSWORD_HASH: str | None = None
+
+
+def unusable_password_hash(*, rounds: int = 4) -> str:
+    """Bcrypt hash of a random secret so invited accounts cannot authenticate."""
+
+    global _UNUSABLE_PASSWORD_HASH
+    if _UNUSABLE_PASSWORD_HASH is None:
+        _UNUSABLE_PASSWORD_HASH = hash_password(secrets.token_urlsafe(32), rounds=rounds)
+    return _UNUSABLE_PASSWORD_HASH
 
 
 def decode_access_token(

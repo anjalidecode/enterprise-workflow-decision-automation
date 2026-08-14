@@ -345,6 +345,8 @@ def test_openapi_bearer_security(client: TestClient) -> None:
     assert login.get("security") == []
     register = openapi["paths"]["/api/v1/auth/register"]["post"]
     assert register.get("security") == []
+    activate = openapi["paths"]["/api/v1/auth/activate"]["post"]
+    assert activate.get("security") == []
 
 
 def test_password_hashes_never_returned(client: TestClient) -> None:

@@ -8,7 +8,7 @@ Intelligent HR workflows powered by specialized agents, policy-aware decisions, 
 
 The customer-facing product name is **WorkSphere AI**. The repository name is for source control only.
 
-## Current status (Modules 1–5D)
+## Current status (Modules 1–5E)
 
 | Module | Scope |
 |--------|--------|
@@ -20,6 +20,7 @@ The customer-facing product name is **WorkSphere AI**. The repository name is fo
 | **5B** | JWT authentication + development RBAC |
 | **5C** | PostgreSQL persistence for platform/application records |
 | **5D** | WorkSphere AI professional React frontend + public registration |
+| **5E** | Admin user management, invitations, and role assignment |
 
 **Do not treat the stack as production-ready.** Domain HR JSON stores remain simulated. Docker and cloud deployment are later phases.
 
@@ -102,7 +103,12 @@ Do not commit `frontend/.env`.
 
 ### Login / registration / demo accounts
 
-Create a real organization account at `/register` (email + password + company name). The first user of a **new** organization is assigned `admin`. Later public users joining that organization receive `employee`. Role cannot be chosen in the UI.
+Create a real organization account at `/register` (email + password + company name).
+
+- The first user of a **new** organization is assigned `admin`.
+- Later public registrations for the **same** organization receive `employee`.
+- Public signup cannot choose `admin`, `hr`, or `manager`.
+- Role assignment for operational staff happens in **User Management** (administrators only).
 
 Existing development users still work.
 
@@ -129,8 +135,10 @@ Password for all active demo users: `dev-password-123`
 | `/requests` | Employee self-service start-workflow form |
 | `/leave` `/attendance` `/recruitment` `/onboarding` `/performance` `/training` `/offboarding` `/hr-services` | Domain request forms → `POST /workflows/run` |
 | `/employees` | HR activity view (no employees directory API yet) |
+| `/users` | Admin user management (invite, roles, activate/deactivate) |
+| `/activate` | Set a password for an invited account |
 | `/audit` | Aggregated audit snapshots |
-| `/settings` | Profile and session |
+| `/settings` | Profile, session, and (admin) link to User Management |
 
 ### Roles (UI visibility)
 
@@ -139,9 +147,24 @@ Password for all active demo users: `dev-password-123`
 | **employee** | Dashboard, My Workflows, My Requests, My Leave, My Attendance, My Training, HR Services, settings |
 | **manager** | + Team Workflows, Approvals, Recruitment, Analytics |
 | **hr** | + Employees, Offboarding, Audit, Analytics |
-| **admin** | Broad platform navigation |
+| **admin** | Broad platform navigation, including User Management |
 
 Frontend hiding a menu item is **not** security. Backend RBAC remains authoritative.
+
+### User management and invitations
+
+Organization administrators can open **User Management** (`/users` or Settings → User Management) to:
+
+- List users in **their organization only**
+- Invite users as Employee, Manager, or HR (not Admin)
+- Change operational roles
+- Deactivate / reactivate accounts
+
+Invited users cannot sign in until they set a password at `/activate` with a one-time, expiring token. The invite API returns an activation link for this phase. **Email delivery is not implemented** (planned for a later notification phase). Tokens are stored hashed; passwords are stored as bcrypt hashes only.
+
+An administrator cannot deactivate themselves or leave the organization with zero admins.
+
+Inactive and invited accounts are rejected at login. Authorization uses the authenticated JWT user — the API ignores client-supplied `role`, `organization_id`, and `employee_id`.
 
 ### Frontend tests
 
@@ -157,6 +180,7 @@ npm test
 - Workflow list summaries do not include `user_id` / “requested by”
 - JWT stored in `localStorage` for development convenience (not production hardening)
 - UI notifications are toasts, not email
+- Invitation links are shown to the inviting admin; outbound email is not sent
 
 ## PostgreSQL setup (Module 5C)
 
@@ -212,7 +236,14 @@ uvicorn app.api.main:app --reload --host 127.0.0.1 --port 8000
 | `GET` | `/api/v1/health` | Public |
 | `POST` | `/api/v1/auth/login` | Public |
 | `POST` | `/api/v1/auth/register` | Public |
+| `POST` | `/api/v1/auth/activate` | Public (invitation token) |
 | `GET` | `/api/v1/auth/me` | Bearer |
+| `GET` | `/api/v1/users` | Bearer + admin |
+| `POST` | `/api/v1/users/invite` | Bearer + admin |
+| `GET` | `/api/v1/users/{id}` | Bearer + admin |
+| `PATCH` | `/api/v1/users/{id}` | Bearer + admin |
+| `POST` | `/api/v1/users/{id}/activate` | Bearer + admin |
+| `POST` | `/api/v1/users/{id}/deactivate` | Bearer + admin |
 | `GET` | `/api/v1/workflows/types` | Bearer |
 | `POST` | `/api/v1/workflows/run` | Bearer |
 | `GET` | `/api/v1/workflows` | Bearer |
@@ -277,4 +308,5 @@ python run.py "Find candidates for the Python Backend Developer position."
 
 | Phase | Planned |
 |-------|---------|
-| **Post-5D** | Monitoring, deployment, deeper persistence, employee directory API |
+| **5E** | Admin user management complete in this phase |
+| **Later** | Monitoring, deployment, email notifications, deeper persistence |

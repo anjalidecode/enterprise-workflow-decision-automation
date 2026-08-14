@@ -6,6 +6,10 @@ import type {
   RegisterRequest,
   TokenResponse,
   User,
+  InviteUserRequest,
+  InviteUserResponse,
+  ManagedUser,
+  UserListResponse,
   Workflow,
   WorkflowAudit,
   WorkflowListResponse,
@@ -31,6 +35,65 @@ export const authApi = {
   },
   me(token?: string | null): Promise<User> {
     return apiRequest<User>('/auth/me', { token })
+  },
+  activate(body: {
+    token: string
+    password: string
+    confirm_password: string
+  }): Promise<{ message: string; user: User }> {
+    return apiRequest<{ message: string; user: User }>('/auth/activate', {
+      method: 'POST',
+      body,
+      token: null,
+    })
+  },
+}
+
+export type ListUsersParams = {
+  search?: string
+  role?: string
+  status?: string
+  limit?: number
+  offset?: number
+}
+
+export const usersApi = {
+  list(params: ListUsersParams = {}): Promise<UserListResponse> {
+    const query = new URLSearchParams()
+    if (params.search) query.set('search', params.search)
+    if (params.role) query.set('role', params.role)
+    if (params.status) query.set('status', params.status)
+    if (params.limit != null) query.set('limit', String(params.limit))
+    if (params.offset != null) query.set('offset', String(params.offset))
+    const qs = query.toString()
+    return apiRequest<UserListResponse>(`/users${qs ? `?${qs}` : ''}`)
+  },
+  get(userId: string): Promise<ManagedUser> {
+    return apiRequest<ManagedUser>(`/users/${encodeURIComponent(userId)}`)
+  },
+  invite(body: InviteUserRequest): Promise<InviteUserResponse> {
+    return apiRequest<InviteUserResponse>('/users/invite', {
+      method: 'POST',
+      body,
+    })
+  },
+  updateRole(userId: string, role: string): Promise<ManagedUser> {
+    return apiRequest<ManagedUser>(`/users/${encodeURIComponent(userId)}`, {
+      method: 'PATCH',
+      body: { role },
+    })
+  },
+  activate(userId: string): Promise<ManagedUser> {
+    return apiRequest<ManagedUser>(`/users/${encodeURIComponent(userId)}/activate`, {
+      method: 'POST',
+      body: {},
+    })
+  },
+  deactivate(userId: string): Promise<ManagedUser> {
+    return apiRequest<ManagedUser>(
+      `/users/${encodeURIComponent(userId)}/deactivate`,
+      { method: 'POST', body: {} },
+    )
   },
 }
 

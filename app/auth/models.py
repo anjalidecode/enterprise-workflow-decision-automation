@@ -13,6 +13,16 @@ class Role(str, Enum):
     ADMIN = "admin"
 
 
+class UserStatus(str, Enum):
+    INVITED = "invited"
+    ACTIVE = "active"
+    INACTIVE = "inactive"
+
+
+# Roles an administrator may assign through user management (not public signup).
+ASSIGNABLE_ROLES = frozenset({Role.EMPLOYEE, Role.MANAGER, Role.HR})
+
+
 @dataclass(frozen=True)
 class User:
     """Internal user record. Never serialize password_hash to API clients."""
@@ -24,3 +34,5 @@ class User:
     role: Role
     employee_id: str | None = None
     is_active: bool = True
+    full_name: str | None = None
+    status: UserStatus = UserStatus.ACTIVE

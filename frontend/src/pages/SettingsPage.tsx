@@ -57,6 +57,11 @@ export function SettingsPage() {
               administrators. This application never stores secrets in the browser beyond
               your session token.
             </p>
+            {user?.role === 'admin' ? (
+              <Link className="btn btn-primary" to="/users">
+                User Management
+              </Link>
+            ) : null}
           </div>
         </div>
       </div>

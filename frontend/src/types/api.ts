@@ -1,6 +1,7 @@
 /** TypeScript types mirroring the backend API schemas. */
 
 export type Role = 'employee' | 'manager' | 'hr' | 'admin'
+export type UserStatus = 'invited' | 'active' | 'inactive'
 
 export type WorkflowType =
   | 'leave_attendance'
@@ -19,6 +20,49 @@ export interface User {
   organization_id: string
   role: Role
   employee_id: string | null
+  full_name?: string | null
+  status?: UserStatus
+}
+
+export interface ManagedUser {
+  user_id: string
+  username: string
+  full_name: string | null
+  organization_id: string
+  role: Role
+  employee_id: string | null
+  status: UserStatus
+  is_active: boolean
+  created_at: string | null
+}
+
+export interface UserListResponse {
+  users: ManagedUser[]
+  total: number
+  limit: number
+  offset: number
+}
+
+export interface InviteUserRequest {
+  full_name: string
+  email: string
+  role: Exclude<Role, 'admin'>
+}
+
+export interface InviteUserResponse {
+  message: string
+  user: ManagedUser
+  invitation: {
+    expires_at: string
+    activation_path: string
+    activation_token: string
+  }
+}
+
+export interface ActivateAccountRequest {
+  token: string
+  password: string
+  confirm_password: string
 }
 
 export interface TokenResponse {

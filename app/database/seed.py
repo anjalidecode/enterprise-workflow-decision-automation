@@ -66,6 +66,8 @@ def seed_development_data(
                 role=user.role.value if isinstance(user.role, Role) else str(user.role),
                 employee_id=user.employee_id,
                 is_active=user.is_active,
+                full_name=user.full_name,
+                status=user.status.value,
             )
 
 

@@ -26,7 +26,7 @@ from app.api.errors import (
     unhandled_exception_handler,
     validation_exception_handler,
 )
-from app.api.routes import approvals, auth, health, workflows
+from app.api.routes import approvals, auth, health, users, workflows
 from app.config.settings import get_settings
 from app.workflows.errors import WorkflowResumeError
 
@@ -53,7 +53,7 @@ def create_app() -> FastAPI:
         CORSMiddleware,
         allow_origins=settings.cors_origin_list,
         allow_credentials=True,
-        allow_methods=["GET", "POST", "OPTIONS"],
+        allow_methods=["GET", "POST", "PATCH", "OPTIONS"],
         allow_headers=["*", "X-Request-ID", "Authorization"],
         expose_headers=["X-Request-ID"],
     )
@@ -79,6 +79,7 @@ def create_app() -> FastAPI:
     prefix = settings.api_v1_prefix
     application.include_router(health.router, prefix=prefix)
     application.include_router(auth.router, prefix=prefix)
+    application.include_router(users.router, prefix=prefix)
     application.include_router(workflows.router, prefix=prefix)
     application.include_router(approvals.router, prefix=prefix)
 
@@ -108,6 +109,7 @@ def create_app() -> FastAPI:
                 path_key.endswith("/health")
                 or path_key.endswith("/auth/login")
                 or path_key.endswith("/auth/register")
+                or path_key.endswith("/auth/activate")
             ):
                 for method_spec in methods.values():
                     if isinstance(method_spec, dict):

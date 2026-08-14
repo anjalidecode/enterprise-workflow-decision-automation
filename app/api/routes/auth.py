@@ -5,8 +5,16 @@ from __future__ import annotations
 from fastapi import APIRouter
 
 from app.auth.dependencies import CurrentUser
-from app.auth.schemas import LoginRequest, RegisterRequest, RegisterResponse, TokenResponse, UserPublic
+from app.auth.schemas import (
+    ActivateAccountRequest,
+    LoginRequest,
+    RegisterRequest,
+    RegisterResponse,
+    TokenResponse,
+    UserPublic,
+)
 from app.auth.service import login, register, to_public_user
+from app.auth.user_admin import complete_invitation
 
 router = APIRouter(tags=["Auth"])
 
@@ -43,6 +51,35 @@ def register_endpoint(body: RegisterRequest) -> RegisterResponse:
         password=body.password,
         confirm_password=body.confirm_password,
         organization_name=body.organization_name,
+    )
+
+
+@router.post(
+    "/auth/activate",
+    response_model=RegisterResponse,
+    summary="Activate an invited account",
+    description=(
+        "Consumes a one-time invitation token and sets a password. "
+        "Does not accept role or organization_id from the client."
+    ),
+)
+def activate_account_endpoint(body: ActivateAccountRequest) -> RegisterResponse:
+    user = complete_invitation(
+        token=body.token,
+        password=body.password,
+        confirm_password=body.confirm_password,
+    )
+    return RegisterResponse(
+        message="Account activated successfully. You can now sign in.",
+        user=UserPublic(
+            user_id=user.user_id,
+            username=user.username,
+            organization_id=user.organization_id,
+            role=user.role,
+            employee_id=user.employee_id,
+            full_name=user.full_name,
+            status=user.status,
+        ),
     )
 
 

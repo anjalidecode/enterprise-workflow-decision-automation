@@ -49,7 +49,7 @@ def get_current_user(
     except DatabaseUnavailableError as exc:
         raise auth_required_error(str(exc)) from exc
 
-    if user is None or not user.is_active:
+    if user is None or not user.is_active or user.status.value != "active":
         raise auth_required_error("User account is inactive or unknown.")
 
     # Token claims must match the stored user (prevents stale/tampered role/org).

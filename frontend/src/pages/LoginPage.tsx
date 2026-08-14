@@ -111,6 +111,9 @@ export function LoginPage() {
         <p className="auth-switch">
           New to WorkSphere AI? <Link to="/register">Create an account</Link>
         </p>
+        <p className="auth-switch">
+          Have an invitation? <Link to="/activate">Activate your account</Link>
+        </p>
         <details className="dev-access">
           <summary>Development access</summary>
           <p>

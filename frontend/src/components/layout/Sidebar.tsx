@@ -9,6 +9,7 @@ const ICONS: Record<string, string> = {
   requests: '✎',
   approvals: '✓',
   employees: '👤',
+  users: '✚',
   leave: '◷',
   attendance: '◷',
   recruitment: '⊕',

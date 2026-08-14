@@ -9,7 +9,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.errors import APIError
-from app.auth.models import Role, User
+from app.auth.models import Role, User, UserStatus
 from app.auth.schemas import RegisterResponse, TokenResponse, UserPublic
 from app.auth.security import create_access_token, hash_password, verify_password
 from app.database.errors import DatabaseNotConfiguredError, DatabaseUnavailableError
@@ -28,6 +28,8 @@ def to_public_user(user: User) -> UserPublic:
         organization_id=user.organization_id,
         role=user.role,
         employee_id=user.employee_id,
+        full_name=user.full_name,
+        status=user.status,
     )
 
 
@@ -48,7 +50,13 @@ def authenticate_user(
                 code="INVALID_CREDENTIALS",
                 message="Invalid username or password.",
             )
-        if not user.is_active:
+        if user.status == UserStatus.INVITED or not user.is_active:
+            raise APIError(
+                status_code=401,
+                code="AUTHENTICATION_REQUIRED",
+                message="User account is inactive.",
+            )
+        if user.status != UserStatus.ACTIVE:
             raise APIError(
                 status_code=401,
                 code="AUTHENTICATION_REQUIRED",
@@ -103,6 +111,27 @@ def _organization_slug(name: str) -> str:
     return slug[:80] or "org"
 
 
+def validate_password(password: str, confirm_password: str) -> None:
+    if password != confirm_password:
+        raise APIError(
+            status_code=400,
+            code="INVALID_REQUEST",
+            message="Password and confirmation do not match.",
+        )
+    if len(password) < 10:
+        raise APIError(
+            status_code=400,
+            code="INVALID_REQUEST",
+            message="Password must be at least 10 characters.",
+        )
+    if not re.search(r"[A-Za-z]", password) or not re.search(r"\d", password):
+        raise APIError(
+            status_code=400,
+            code="INVALID_REQUEST",
+            message="Password must include at least one letter and one number.",
+        )
+
+
 def _validate_registration(
     *,
     full_name: str,
@@ -131,24 +160,7 @@ def _validate_registration(
             code="INVALID_REQUEST",
             message="Organization name is required.",
         )
-    if password != confirm_password:
-        raise APIError(
-            status_code=400,
-            code="INVALID_REQUEST",
-            message="Password and confirmation do not match.",
-        )
-    if len(password) < 10:
-        raise APIError(
-            status_code=400,
-            code="INVALID_REQUEST",
-            message="Password must be at least 10 characters.",
-        )
-    if not re.search(r"[A-Za-z]", password) or not re.search(r"\d", password):
-        raise APIError(
-            status_code=400,
-            code="INVALID_REQUEST",
-            message="Password must include at least one letter and one number.",
-        )
+    validate_password(password, confirm_password)
     return email_key, org_name
 
 
@@ -205,6 +217,8 @@ def register(
                 role=role.value,
                 employee_id=None,
                 is_active=True,
+                full_name=full_name.strip(),
+                status=UserStatus.ACTIVE.value,
             )
         except IntegrityError as exc:
             raise APIError(

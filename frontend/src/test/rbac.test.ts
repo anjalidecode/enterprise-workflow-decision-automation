@@ -13,6 +13,7 @@ describe('role-based navigation', () => {
     expect(paths).not.toContain('/recruitment')
     expect(paths).not.toContain('/offboarding')
     expect(paths).not.toContain('/audit')
+    expect(paths).not.toContain('/users')
   })
 
   it('manager navigation includes approvals and recruitment', () => {
@@ -22,6 +23,7 @@ describe('role-based navigation', () => {
     expect(paths).toContain('/analytics')
     expect(paths).not.toContain('/employees')
     expect(paths).not.toContain('/audit')
+    expect(paths).not.toContain('/users')
   })
 
   it('hr navigation includes employees, audit, offboarding', () => {
@@ -30,6 +32,7 @@ describe('role-based navigation', () => {
     expect(paths).toContain('/audit')
     expect(paths).toContain('/offboarding')
     expect(paths).toContain('/approvals')
+    expect(paths).not.toContain('/users')
   })
 
   it('admin navigation is broad', () => {
@@ -38,6 +41,7 @@ describe('role-based navigation', () => {
     expect(paths).toContain('/employees')
     expect(paths).toContain('/audit')
     expect(paths).toContain('/settings')
+    expect(paths).toContain('/users')
   })
 
   it('approver roles and employee workflow constraints', () => {
