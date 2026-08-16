@@ -75,6 +75,24 @@ def _safe_decision(state: WorkflowState) -> dict[str, Any]:
     return _pick(decision, _SAFE_DECISION_KEYS)
 
 
+def _llm_audit(state: WorkflowState) -> dict[str, Any]:
+    metadata = state.get("metadata") or {}
+    payload: dict[str, Any] = {}
+    llm = metadata.get("llm")
+    if isinstance(llm, dict):
+        for key in ("provider", "model", "operation", "status", "duration_ms", "token_usage", "error_type"):
+            if key in llm:
+                payload[key] = llm[key]
+    response_meta = metadata.get("llm_response")
+    if isinstance(response_meta, dict) and response_meta:
+        payload["response"] = {
+            key: response_meta[key]
+            for key in ("provider", "model", "operation", "status", "duration_ms", "token_usage")
+            if key in response_meta
+        }
+    return payload
+
+
 def _approval_checkpoint(state: WorkflowState) -> dict[str, Any] | None:
     metadata = state.get("metadata") or {}
     checkpoint = metadata.get("approval")
@@ -122,6 +140,7 @@ def build_audit_snapshot(
         completed_actions=list(state.get("completed_actions") or []),
         errors=list(state.get("errors") or []),
         approval_checkpoint=_approval_checkpoint(state),
+        llm=_llm_audit(state),
     )
 
 

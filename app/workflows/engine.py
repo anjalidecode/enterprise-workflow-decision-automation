@@ -334,6 +334,10 @@ def _unsupported_state(
     initiated_by: str,
     entities: dict[str, Any] | None,
     router: RouterResult,
+    metadata: dict[str, Any] | None = None,
+    status: str | None = None,
+    final_response: str | None = None,
+    record_error: bool = True,
 ) -> WorkflowState:
     state = create_initial_state(
         user_request,
@@ -342,19 +346,58 @@ def _unsupported_state(
         initiated_by=initiated_by,
         user_role=user_role,
         entities=entities,
-        workflow_type="",
+        workflow_type=router.workflow_type or "",
     )
-    state["status"] = router.status
+    resolved_status = status or router.status
+    state["status"] = resolved_status
     state["current_stage"] = "router"
     state["final_response"] = (
-        router.unsupported_reason
+        final_response
+        or router.unsupported_reason
         or "Request could not be routed to a registered workflow."
     )
-    state["errors"] = [state["final_response"]]
-    state["metadata"] = {
-        "router": router.model_dump(),
-    }
+    state["errors"] = [state["final_response"]] if record_error else []
+    extra = dict(metadata or {})
+    extra["router"] = router.model_dump()
+    state["metadata"] = extra
     return state
+
+
+def _safe_llm_metadata(payload: dict[str, Any] | None) -> dict[str, Any]:
+    if not payload:
+        return {}
+    allowed = {
+        "provider",
+        "model",
+        "operation",
+        "status",
+        "duration_ms",
+        "token_usage",
+        "error_type",
+    }
+    return {key: payload[key] for key in allowed if key in payload and payload[key] not in (None, "")}
+
+
+def _merge_understood_entities(
+    base: dict[str, Any] | None,
+    extracted: dict[str, Any],
+    *,
+    user_role: str,
+) -> dict[str, Any]:
+    merged = dict(base or {})
+    jwt_employee = str(merged.get("employee_id") or "").strip()
+    for key, value in extracted.items():
+        if value in (None, "", []):
+            continue
+        if key == "employee_id" and (user_role or "").lower() == "employee" and jwt_employee:
+            continue
+        if key not in merged or merged.get(key) in (None, "", []):
+            merged[key] = value
+    if extracted.get("duration_days") and not merged.get("days"):
+        merged["days"] = extracted["duration_days"]
+    if (user_role or "").lower() == "employee" and jwt_employee:
+        merged["employee_id"] = jwt_employee
+    return merged
 
 
 class WorkflowEngine:
@@ -397,9 +440,107 @@ class WorkflowEngine:
         started = time.perf_counter()
         completed_at = _utc_now()
 
+        from app.llm.models import GroundedResponseInput, UserContext
+        from app.llm.understanding import public_understanding, understand_request
+        from app.llm.responses import generate_grounded_response
+
+        explicit_type = (workflow_type or "").strip() or None
+        user_context = UserContext(
+            role=user_role or "",
+            employee_id=str((entities or {}).get("employee_id") or ""),
+            organization_id=organization_id or "",
+            user_id=user_id or "",
+        )
+        understanding = understand_request(
+            user_request,
+            user=user_context,
+            explicit_workflow_type=explicit_type,
+            skip_llm=bool(explicit_type),
+        )
+        public = public_understanding(understanding).model_dump()
+        llm_trace = {
+            "provider": understanding.provider,
+            "model": "",
+            "operation": "understand",
+            "status": "success",
+        }
+        if understanding.provider == "gemini":
+            from app.llm.factory import get_llm_client
+
+            llm_trace["model"] = get_llm_client().model
+
+        merged_entities = _merge_understood_entities(
+            entities,
+            understanding.entities.model_dump(exclude_none=True),
+            user_role=user_role,
+        )
+
+        if not explicit_type and understanding.request_kind == "unsupported":
+            router_result = RouterResult(
+                workflow_type="",
+                confidence=understanding.confidence,
+                matched_hints=[],
+                unsupported_reason=understanding.reason or "Request is outside WorkSphere AI scope.",
+                status="unsupported",
+            )
+            state = _unsupported_state(
+                user_request,
+                organization_id=organization_id,
+                user_id=user_id,
+                user_role=user_role,
+                initiated_by=initiated_by or user_id,
+                entities=merged_entities,
+                router=router_result,
+                metadata={"request_understanding": public, "llm": _safe_llm_metadata(llm_trace)},
+                status="unsupported",
+                final_response=understanding.reason,
+                record_error=True,
+            )
+            duration_ms = (time.perf_counter() - started) * 1000
+            return self._maybe_persist(
+                WorkflowResult(
+                    state=dict(state),
+                    audit=build_audit_snapshot(state, completed_at=completed_at),
+                    metrics=build_run_metrics(state, duration_ms=duration_ms),
+                    router=router_result,
+                )
+            )
+
+        if not explicit_type and understanding.needs_clarification:
+            router_result = RouterResult(
+                workflow_type=understanding.workflow_type,
+                confidence=understanding.confidence,
+                matched_hints=[],
+                unsupported_reason=understanding.clarification_question,
+                status="needs_clarification",
+            )
+            state = _unsupported_state(
+                user_request,
+                organization_id=organization_id,
+                user_id=user_id,
+                user_role=user_role,
+                initiated_by=initiated_by or user_id,
+                entities=merged_entities,
+                router=router_result,
+                metadata={"request_understanding": public, "llm": _safe_llm_metadata(llm_trace)},
+                status="needs_clarification",
+                final_response=understanding.clarification_question,
+                record_error=False,
+            )
+            duration_ms = (time.perf_counter() - started) * 1000
+            return self._maybe_persist(
+                WorkflowResult(
+                    state=dict(state),
+                    audit=build_audit_snapshot(state, completed_at=completed_at),
+                    metrics=build_run_metrics(state, duration_ms=duration_ms),
+                    router=router_result,
+                )
+            )
+
+        routed_type = explicit_type or (understanding.workflow_type or None)
         router_result = self._router.classify(
             user_request,
-            workflow_type=workflow_type,
+            workflow_type=routed_type,
         )
 
         if router_result.status != "routed" or not router_result.workflow_type:
@@ -409,8 +550,9 @@ class WorkflowEngine:
                 user_id=user_id,
                 user_role=user_role,
                 initiated_by=initiated_by or user_id,
-                entities=entities,
+                entities=merged_entities,
                 router=router_result,
+                metadata={"request_understanding": public, "llm": _safe_llm_metadata(llm_trace)},
             )
             duration_ms = (time.perf_counter() - started) * 1000
             return self._maybe_persist(
@@ -438,8 +580,9 @@ class WorkflowEngine:
                 user_id=user_id,
                 user_role=user_role,
                 initiated_by=initiated_by or user_id,
-                entities=entities,
+                entities=merged_entities,
                 router=router_result,
+                metadata={"request_understanding": public, "llm": _safe_llm_metadata(llm_trace)},
             )
             duration_ms = (time.perf_counter() - started) * 1000
             return self._maybe_persist(
@@ -463,7 +606,7 @@ class WorkflowEngine:
             initiated_by=initiated_by or user_id,
             user_role=user_role,
             request_id=request_id,
-            entities=entities,
+            entities=merged_entities,
             workflow_type=router_result.workflow_type,
         )
         completed_at = _utc_now()
@@ -471,6 +614,38 @@ class WorkflowEngine:
 
         metadata = dict(state.get("metadata") or {})
         metadata["router"] = router_result.model_dump()
+        metadata["request_understanding"] = public
+        metadata["llm"] = _safe_llm_metadata(llm_trace)
+
+        if understanding.provider == "gemini" and state.get("final_response"):
+            decision = state.get("decision") or {}
+            rewritten, respond_call = generate_grounded_response(
+                GroundedResponseInput(
+                    workflow_type=str(state.get("workflow_type") or ""),
+                    status=str(state.get("status") or ""),
+                    outcome=str(decision.get("outcome") or ""),
+                    rationale=str(decision.get("rationale") or ""),
+                    blockers=list(decision.get("blockers") or []),
+                    warnings=list(decision.get("warnings") or []),
+                    evidence=list(decision.get("evidence") or []),
+                    requires_human_approval=bool(state.get("requires_human_approval")),
+                    deterministic_response=str(state.get("final_response") or ""),
+                )
+            )
+            if rewritten:
+                state = {**state, "final_response": rewritten}  # type: ignore[assignment]
+            if respond_call is not None:
+                metadata["llm_response"] = _safe_llm_metadata(
+                    {
+                        "provider": respond_call.provider,
+                        "model": respond_call.model,
+                        "operation": "respond",
+                        "status": respond_call.status,
+                        "duration_ms": respond_call.duration_ms,
+                        "token_usage": respond_call.usage.model_dump(),
+                        "error_type": respond_call.error_type,
+                    }
+                )
         if state.get("requires_human_approval") or state.get("status") == "awaiting_human_approval":
             metadata["approval"] = {
                 "status": "awaiting",

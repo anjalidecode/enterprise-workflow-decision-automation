@@ -41,6 +41,8 @@ def _configure_test_database() -> str:
     )
     os.environ["DATABASE_URL"] = url
     os.environ.setdefault("APP_ENV", "test")
+    # Tests must never call the real Gemini API, even if a local .env has a key.
+    os.environ["GOOGLE_API_KEY"] = ""
     return url
 
 
@@ -88,6 +90,9 @@ def reset_simulated_runtime() -> None:
     _configure_test_database()
     from app.config.settings import get_settings
 
+    from app.llm.factory import reset_llm_client
+    from app.llm.metrics import reset_llm_metrics
+
     get_settings.cache_clear()
 
     reset_hr_store()
@@ -106,6 +111,8 @@ def reset_simulated_runtime() -> None:
     _truncate_and_seed()
     # API/auth paths enable persistence via get_engine when DATABASE_URL is set.
     reset_workflow_engine(with_persistence=False)
+    reset_llm_client()
+    reset_llm_metrics()
     yield
     reset_hr_store()
     reset_recruitment_store()
@@ -120,3 +127,5 @@ def reset_simulated_runtime() -> None:
     reset_workflow_engine(with_persistence=False)
     reset_execution_index()
     reset_user_store()
+    reset_llm_client()
+    reset_llm_metrics()

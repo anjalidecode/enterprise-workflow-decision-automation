@@ -8,7 +8,7 @@ Intelligent HR workflows powered by specialized agents, policy-aware decisions, 
 
 The customer-facing product name is **WorkSphere AI**. The repository name is for source control only.
 
-## Current status (Modules 1–5E)
+## Current status (Modules 1–5F)
 
 | Module | Scope |
 |--------|--------|
@@ -21,6 +21,7 @@ The customer-facing product name is **WorkSphere AI**. The repository name is fo
 | **5C** | PostgreSQL persistence for platform/application records |
 | **5D** | WorkSphere AI professional React frontend + public registration |
 | **5E** | Admin user management, invitations, and role assignment |
+| **5F** | Gemini request understanding + grounded responses (optional API key) |
 
 **Do not treat the stack as production-ready.** Domain HR JSON stores remain simulated. Docker and cloud deployment are later phases.
 
@@ -36,10 +37,19 @@ React + TypeScript frontend (frontend/)
 FastAPI (app/api) ── JWT auth / RBAC / schemas / request id
     │
     ▼
+LLM request understanding (Gemini or deterministic fallback)
+    │  structured intent only — never executes HR actions
+    ▼
 WorkflowEngine.run() / resume()
     │
     ▼
 WorkflowRouter → WorkflowRegistry → LangGraph + WorkflowState (live run state)
+    │
+    ▼
+Specialized agents → ToolRegistry / ToolExecutor → MemoryFacade / KnowledgeStore
+    │
+    ▼
+Policy + decision + validation + human approval + action
     │
     ▼
 PersistenceService → PostgreSQL
@@ -51,7 +61,9 @@ PersistenceService → PostgreSQL
 |---------|----------------|
 | UI / UX | React frontend (`frontend/`) |
 | AuthN / AuthZ | FastAPI JWT + RBAC |
+| Natural language | Gemini via `app/llm` (optional); deterministic fallback without a key |
 | Live workflow coordination | `WorkflowState` / LangGraph |
+| Decisions and actions | Specialized agents + tools + policy (not Gemini) |
 | Platform records | PostgreSQL (Module 5C) |
 | Domain HR simulation | JSON under `data/` |
 
@@ -271,6 +283,61 @@ npm install
 
 Set `JWT_SECRET_KEY` for any non-development environment.
 
+## Gemini / natural-language requests (Module 5F)
+
+Gemini improves **language understanding and communication**. It does **not** replace `WorkflowEngine`, LangGraph, tools, policy, or human approval. It never directly executes enterprise actions.
+
+```
+User request
+    → LLM request understanding (structured intent)
+    → WorkflowRouter (authoritative, deterministic)
+    → WorkflowEngine → LangGraph → specialized agents
+    → tools / memory / knowledge
+    → policy → decision → validation → approval if required → action
+    → optional grounded response rewrite
+```
+
+### Setup
+
+1. Create a Google Gemini API key.
+2. Add it to local `.env` (never commit `.env`, never send the key to React):
+
+```bash
+GOOGLE_API_KEY=your-key
+GEMINI_MODEL=gemini-3.5-flash
+```
+
+3. Start the backend and frontend as usual.
+4. On **My Requests**, leave workflow as auto-route and type a request such as:  
+   `I need three days off next week. Can you check if I have enough leave?`
+
+**Gemini is optional for local deterministic operation.** If `GOOGLE_API_KEY` is empty, WorkSphere AI uses a labeled deterministic fallback. The UI does not pretend Gemini was used.
+
+Explicit `workflow_type` (domain forms and structured API clients) skips LLM routing.
+
+`POST /api/v1/workflows/run` accepts `request` or `request_text`. Existing structured bodies keep working.
+
+### Requirements traceability
+
+| Project statement | Implementation |
+|-------------------|----------------|
+| Multi-agent coordination | Specialized agents + LangGraph + `WorkflowState` |
+| Intelligent decision support | Analysis + decision + policy + evidence |
+| Tool & system integration | `ToolRegistry` + `ToolExecutor` + service adapters |
+| Shared knowledge & memory | `MemoryFacade` + `KnowledgeStore` + long-term memory |
+| Workflow automation | `WorkflowEngine` + LangGraph + approvals/actions |
+| Enterprise API | FastAPI + JWT + RBAC + PostgreSQL |
+| LLM | Gemini request understanding + optional grounded responses |
+
+### LLM security and observability
+
+- Prompts receive only the request text plus role / employee_id / current date / registered workflow types
+- JWTs, passwords, database URLs, and `GOOGLE_API_KEY` are never sent to the model or to the frontend
+- Safe metadata (`provider`, `model`, `operation`, `status`, `duration`, token usage) is stored on the run
+- Process metrics: `llm_requests_total`, `llm_failures_total`, `llm_latency_seconds` (low-cardinality labels)
+
+Automated tests mock the provider and never call the real Gemini API.
+
 ## Tests
 
 ### Backend
@@ -309,4 +376,5 @@ python run.py "Find candidates for the Python Backend Developer position."
 | Phase | Planned |
 |-------|---------|
 | **5E** | Admin user management complete in this phase |
+| **5F** | Gemini NL understanding complete in this phase |
 | **Later** | Monitoring, deployment, email notifications, deeper persistence |

@@ -14,11 +14,13 @@ DATE_PATTERN = re.compile(r"\b(\d{4}-\d{2}-\d{2})\b")
 def parse_leave_request(text: str) -> LeaveRequest:
     """Extract employee id, day count, and start date from a request string."""
 
+    from app.llm.dates import parse_duration_days
+
     employee_match = EMPLOYEE_ID_PATTERN.search(text)
     days_match = DAYS_PATTERN.search(text)
     date_match = DATE_PATTERN.search(text)
 
-    days = int(days_match.group(1)) if days_match else None
+    days = int(days_match.group(1)) if days_match else parse_duration_days(text)
     return LeaveRequest(
         employee_id=employee_match.group(1).upper() if employee_match else None,
         days=days,

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, field_validator
 
 
 class WorkflowRunRequest(BaseModel):
@@ -14,9 +14,14 @@ class WorkflowRunRequest(BaseModel):
     Extra identity fields in the JSON body are ignored and never trusted.
     """
 
-    model_config = ConfigDict(extra="ignore")
+    model_config = ConfigDict(extra="ignore", populate_by_name=True)
 
-    request: str = Field(..., min_length=1, description="Natural-language business request")
+    request: str = Field(
+        ...,
+        min_length=1,
+        description="Natural-language business request",
+        validation_alias=AliasChoices("request", "request_text"),
+    )
     workflow_type: str | None = Field(
         default=None,
         description="Optional explicit workflow_type; otherwise automatic routing is used",
@@ -70,6 +75,18 @@ class WorkflowAuditResponse(BaseModel):
     pending_actions: list[dict[str, Any]] = Field(default_factory=list)
     errors: list[str] = Field(default_factory=list)
     approval_checkpoint: dict[str, Any] | None = None
+    llm: dict[str, Any] = Field(default_factory=dict)
+
+
+class RequestUnderstandingResponse(BaseModel):
+    intent: str = ""
+    workflow_type: str = ""
+    request_kind: str = ""
+    summary_label: str = ""
+    needs_clarification: bool = False
+    clarification_question: str = ""
+    confidence: float = 0.0
+    entities: dict[str, Any] = Field(default_factory=dict)
 
 
 class WorkflowMetricsResponse(BaseModel):
@@ -106,6 +123,7 @@ class WorkflowRunResponse(BaseModel):
     metrics: WorkflowMetricsResponse | None = None
     router_status: str | None = None
     request_id: str = ""
+    understanding: RequestUnderstandingResponse | None = None
 
 
 class WorkflowSummary(BaseModel):

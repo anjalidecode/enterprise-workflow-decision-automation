@@ -161,6 +161,22 @@ export function WorkflowDetailPage() {
         </div>
       </div>
 
+      {workflow.understanding?.summary_label ? (
+        <div className="card" style={{ marginBottom: '1rem' }}>
+          <div className="card-header">
+            <h3>Request understood as</h3>
+          </div>
+          <div className="card-body">
+            <p>
+              <strong>{workflow.understanding.summary_label}</strong>
+            </p>
+            {workflow.understanding.needs_clarification ? (
+              <p className="muted">{workflow.understanding.clarification_question}</p>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
+
       <div className="panel-grid" style={{ marginBottom: '1rem' }}>
         <div className="card">
           <div className="card-header">
@@ -291,7 +307,7 @@ export function WorkflowDetailPage() {
         <div className="card-body panel-grid">
           <div>
             <h3 style={{ fontSize: '0.95rem', marginBottom: '0.5rem' }}>Completed actions</h3>
-            {workflow.actions.length === 0 ? (
+            {(workflow.actions || []).length === 0 ? (
               <p className="muted">None</p>
             ) : (
               <ul>
@@ -303,7 +319,7 @@ export function WorkflowDetailPage() {
             <h3 style={{ fontSize: '0.95rem', margin: '0.75rem 0 0.5rem' }}>
               Pending actions
             </h3>
-            {workflow.pending_actions.length === 0 ? (
+            {(workflow.pending_actions || []).length === 0 ? (
               <p className="muted">None</p>
             ) : (
               <ul>

@@ -24,10 +24,16 @@ RECRUITMENT_TASKS = [
 
 def recruitment_planner_agent(state: WorkflowState) -> dict[str, Any]:
     parsed = parse_recruitment_request(state["user_request"])
+    incoming = dict(state.get("entities") or {})
+    job_id = incoming.get("job_id") or parsed.get("job_id")
+    query = incoming.get("query") or parsed.get("query")
+    parsed["job_id"] = job_id
+    parsed["query"] = query
     entities = merge_entities(
         state,
-        job_id=parsed.get("job_id"),
-        query=parsed.get("query"),
+        job_id=job_id,
+        query=query,
+        job_title=incoming.get("job_title"),
     )
     metadata = {
         **state.get("metadata", {}),

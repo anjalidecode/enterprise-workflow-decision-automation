@@ -47,6 +47,22 @@ export interface InviteUserRequest {
   full_name: string
   email: string
   role: Exclude<Role, 'admin'>
+  employee_id?: string | null
+}
+
+export interface DirectoryEmployee {
+  employee_id: string
+  name: string
+  department: string | null
+  job_role: string | null
+  employment_status: string | null
+  bound_user_id: string | null
+  bound_username: string | null
+  available: boolean
+}
+
+export interface EmployeeDirectoryResponse {
+  employees: DirectoryEmployee[]
 }
 
 export interface InviteUserResponse {
@@ -113,6 +129,7 @@ export interface WorkflowAudit {
   pending_actions: Record<string, unknown>[]
   errors: string[]
   approval_checkpoint: Record<string, unknown> | null
+  llm?: Record<string, unknown>
 }
 
 export interface WorkflowMetrics {
@@ -133,6 +150,17 @@ export interface WorkflowMetrics {
   success: boolean
 }
 
+export interface RequestUnderstanding {
+  intent: string
+  workflow_type: string
+  request_kind: string
+  summary_label: string
+  needs_clarification: boolean
+  clarification_question: string
+  confidence: number
+  entities: Record<string, unknown>
+}
+
 export interface Workflow {
   workflow_id: string
   workflow_type: string
@@ -149,6 +177,7 @@ export interface Workflow {
   metrics: WorkflowMetrics | null
   router_status: string | null
   request_id: string
+  understanding?: RequestUnderstanding | null
 }
 
 export interface WorkflowSummary {

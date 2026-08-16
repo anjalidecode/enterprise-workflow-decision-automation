@@ -5,7 +5,7 @@ import { ApiClientError } from '../api/client'
 import { Button, LoadingBlock, Modal, StatePanel, StatusBadge } from '../components/ui/Primitives'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
-import type { ManagedUser, Role } from '../types/api'
+import type { DirectoryEmployee, ManagedUser, Role } from '../types/api'
 import { formatDateTime } from '../utils/format'
 import { roleLabel } from '../utils/rbac'
 
@@ -33,12 +33,15 @@ export function UsersPage() {
   const [inviteName, setInviteName] = useState('')
   const [inviteEmail, setInviteEmail] = useState('')
   const [inviteRole, setInviteRole] = useState<Exclude<Role, 'admin'>>('employee')
+  const [inviteEmployeeId, setInviteEmployeeId] = useState('')
+  const [directory, setDirectory] = useState<DirectoryEmployee[]>([])
   const [inviteLoading, setInviteLoading] = useState(false)
   const [inviteError, setInviteError] = useState<string | null>(null)
   const [inviteLink, setInviteLink] = useState<string | null>(null)
 
   const [detail, setDetail] = useState<ManagedUser | null>(null)
   const [pendingRole, setPendingRole] = useState<Role | ''>('')
+  const [pendingEmployeeId, setPendingEmployeeId] = useState('')
   const [confirm, setConfirm] = useState<
     | { type: 'role'; user: ManagedUser; role: Role }
     | { type: 'deactivate'; user: ManagedUser }
@@ -77,9 +80,19 @@ export function UsersPage() {
     setInviteName('')
     setInviteEmail('')
     setInviteRole('employee')
+    setInviteEmployeeId('')
     setInviteError(null)
     setInviteLink(null)
     setInviteLoading(false)
+  }
+
+  async function loadDirectory() {
+    try {
+      const res = await usersApi.listEmployees()
+      setDirectory(res.employees)
+    } catch {
+      setDirectory([])
+    }
   }
 
   async function onInvite(event: FormEvent) {
@@ -87,6 +100,10 @@ export function UsersPage() {
     setInviteError(null)
     if (!inviteName.trim() || !inviteEmail.trim()) {
       setInviteError('Full name and work email are required.')
+      return
+    }
+    if (inviteRole === 'employee' && !inviteEmployeeId) {
+      setInviteError('Select an employee record to bind this account.')
       return
     }
     if (!EMAIL_RE.test(inviteEmail.trim())) {
@@ -99,6 +116,7 @@ export function UsersPage() {
         full_name: inviteName.trim(),
         email: inviteEmail.trim(),
         role: inviteRole,
+        employee_id: inviteRole === 'employee' ? inviteEmployeeId : undefined,
       })
       setInviteLink(result.invitation.activation_path)
       notify({
@@ -114,6 +132,26 @@ export function UsersPage() {
       notify({ tone: 'danger', title: 'Invitation failed', message })
     } finally {
       setInviteLoading(false)
+    }
+  }
+
+  async function applyBinding(target: ManagedUser, employeeId: string) {
+    setActionLoading(true)
+    try {
+      const updated = await usersApi.update(target.user_id, { employee_id: employeeId })
+      setDetail(updated)
+      notify({
+        tone: 'success',
+        title: 'Employee bound',
+        message: `${displayName(updated)} is now bound to ${updated.employee_id}.`,
+      })
+      await load()
+      await loadDirectory()
+    } catch (err) {
+      const message = err instanceof ApiClientError ? err.message : 'Unable to bind employee.'
+      notify({ tone: 'danger', title: 'Binding failed', message })
+    } finally {
+      setActionLoading(false)
     }
   }
 
@@ -201,6 +239,7 @@ export function UsersPage() {
           variant="primary"
           onClick={() => {
             resetInvite()
+            void loadDirectory()
             setInviteOpen(true)
           }}
         >
@@ -291,6 +330,7 @@ export function UsersPage() {
                   <th>Name</th>
                   <th>Email</th>
                   <th>Role</th>
+                  <th>Employee</th>
                   <th>Status</th>
                   <th>Created</th>
                   <th>Actions</th>
@@ -304,13 +344,19 @@ export function UsersPage() {
                     </td>
                     <td>{item.username}</td>
                     <td>{roleLabel(item.role)}</td>
+                    <td className="mono">{item.employee_id || '—'}</td>
                     <td>
                       <StatusBadge status={item.status} />
                     </td>
                     <td>{formatDateTime(item.created_at)}</td>
                     <td>
                       <div className="split" style={{ gap: '0.4rem' }}>
-                        <Button size="sm" onClick={() => setDetail(item)}>
+                        <Button size="sm" onClick={() => {
+                          setDetail(item)
+                          setPendingRole(item.role)
+                          setPendingEmployeeId(item.employee_id || '')
+                          void loadDirectory()
+                        }}>
                           View
                         </Button>
                       </div>
@@ -401,7 +447,11 @@ export function UsersPage() {
                 id="invite-role"
                 className="select"
                 value={inviteRole}
-                onChange={(e) => setInviteRole(e.target.value as Exclude<Role, 'admin'>)}
+                onChange={(e) => {
+                  const next = e.target.value as Exclude<Role, 'admin'>
+                  setInviteRole(next)
+                  if (next !== 'employee') setInviteEmployeeId('')
+                }}
                 disabled={inviteLoading}
               >
                 {ASSIGNABLE_ROLES.map((role) => (
@@ -411,6 +461,28 @@ export function UsersPage() {
                 ))}
               </select>
             </div>
+            {inviteRole === 'employee' ? (
+              <div className="form-row">
+                <label htmlFor="invite-employee">Employee</label>
+                <select
+                  id="invite-employee"
+                  className="select"
+                  value={inviteEmployeeId}
+                  onChange={(e) => setInviteEmployeeId(e.target.value)}
+                  disabled={inviteLoading}
+                  required
+                >
+                  <option value="">Select employee</option>
+                  {directory
+                    .filter((item) => item.available)
+                    .map((item) => (
+                      <option key={item.employee_id} value={item.employee_id}>
+                        {item.employee_id} — {item.name}
+                      </option>
+                    ))}
+                </select>
+              </div>
+            ) : null}
             {inviteError ? (
               <div className="badge badge-danger" role="alert">
                 {inviteError}
@@ -448,9 +520,55 @@ export function UsersPage() {
               <StatusBadge status={detail.status} />
             </div>
             <div className="metric-row">
+              <span className="muted">Employee ID</span>
+              <strong>{detail.employee_id || '—'}</strong>
+            </div>
+            <div className="metric-row">
               <span className="muted">Created</span>
               <strong>{formatDateTime(detail.created_at)}</strong>
             </div>
+            {detail.role === 'employee' ? (
+              <div className="form-row">
+                <label htmlFor="bind-employee">Employee</label>
+                <div className="split" style={{ gap: '0.5rem' }}>
+                  <select
+                    id="bind-employee"
+                    className="select"
+                    value={pendingEmployeeId || detail.employee_id || ''}
+                    onChange={(e) => setPendingEmployeeId(e.target.value)}
+                    disabled={actionLoading || detail.user_id === currentUser?.user_id}
+                  >
+                    <option value="">Select employee</option>
+                    {directory
+                      .filter(
+                        (item) =>
+                          item.available || item.employee_id === detail.employee_id,
+                      )
+                      .map((item) => (
+                        <option key={item.employee_id} value={item.employee_id}>
+                          {item.employee_id} — {item.name}
+                        </option>
+                      ))}
+                  </select>
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    disabled={
+                      actionLoading ||
+                      detail.user_id === currentUser?.user_id ||
+                      !(pendingEmployeeId || detail.employee_id) ||
+                      (pendingEmployeeId || detail.employee_id) === (detail.employee_id || '')
+                    }
+                    onClick={() => {
+                      const next = pendingEmployeeId || detail.employee_id || ''
+                      if (next) void applyBinding(detail, next)
+                    }}
+                  >
+                    Bind
+                  </Button>
+                </div>
+              </div>
+            ) : null}
             {detail.role !== 'admin' ? (
               <div className="form-row">
                 <label htmlFor="change-role">Change role</label>

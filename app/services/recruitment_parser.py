@@ -12,6 +12,7 @@ _TITLE_HINTS: list[tuple[str, str]] = [
     ("python backend", "J001"),
     ("backend developer", "J001"),
     ("python developer", "J001"),
+    ("fastapi", "J001"),
     ("frontend developer", "J002"),
     ("front-end developer", "J002"),
     ("react developer", "J002"),
@@ -32,6 +33,10 @@ def parse_recruitment_request(user_request: str) -> dict[str, Any]:
             if hint in lowered:
                 job_id = mapped
                 break
+        if job_id is None and "python" in lowered and any(
+            token in lowered for token in ("candidate", "applicant", "shortlist", "backend")
+        ):
+            job_id = "J001"
 
     return {
         "job_id": job_id,

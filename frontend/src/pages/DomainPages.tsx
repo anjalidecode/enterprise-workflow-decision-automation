@@ -146,13 +146,13 @@ export function RequestsPage() {
         </div>
       </div>
       <StartWorkflowForm
-        title="Start new workflow"
+        title="What would you like WorkSphere AI to do?"
         description={
           user?.role === 'employee'
-            ? 'Self-service requests only. Privileged workflow types are not available to employees.'
-            : 'Select a workflow type and describe the request.'
+            ? 'Describe what you need in your own words. Self-service requests apply only to your employee record. This is not a generic chatbot.'
+            : 'Describe the HR request in natural language, or pick a workflow type. Specialized agents still execute the workflow.'
         }
-        placeholder="Describe the request, for example: Check whether I can take 3 days of leave next week."
+        placeholder='I need three days off next week. Can you check my balance?'
       />
     </div>
   )

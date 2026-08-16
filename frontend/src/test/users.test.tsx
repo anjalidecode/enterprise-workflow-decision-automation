@@ -86,6 +86,22 @@ function usersFetch(options?: {
       const body = JSON.parse(String(init?.body || '{}')) as { role: string }
       return jsonResponse({ ...users[1], role: body.role })
     }
+    if (url.includes('/employees')) {
+      return jsonResponse({
+        employees: [
+          {
+            employee_id: 'E002',
+            name: 'Jordan Chen',
+            department: 'Finance',
+            job_role: 'Financial Analyst',
+            employment_status: 'active',
+            bound_user_id: null,
+            bound_username: null,
+            available: true,
+          },
+        ],
+      })
+    }
     if (url.includes('/users')) {
       return jsonResponse({ users: list, total: list.length, limit: 50, offset: 0 })
     }
@@ -170,6 +186,7 @@ describe('user management', () => {
     await user.click(screen.getByRole('button', { name: /invite user/i }))
     await user.type(screen.getByLabelText(/full name/i), 'Amit')
     await user.type(screen.getByLabelText(/work email/i), 'amit@worksphere.test')
+    await user.selectOptions(screen.getByLabelText(/^role$/i), 'hr')
     await user.click(screen.getByRole('button', { name: /send invitation/i }))
     expect(await screen.findByRole('alert')).toHaveTextContent(/do not have permission/i)
   }, 15000)

@@ -55,6 +55,10 @@ def get_current_user(
     # Token claims must match the stored user (prevents stale/tampered role/org).
     if user.organization_id != organization_id or user.role.value != role_value:
         raise auth_required_error("Access token claims do not match the user record.")
+    token_employee = str(payload.get("employee_id") or "").strip()
+    stored_employee = (user.employee_id or "").strip()
+    if token_employee != stored_employee:
+        raise auth_required_error("Access token claims do not match the user record.")
 
     return user
 

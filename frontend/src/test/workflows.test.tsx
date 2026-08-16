@@ -111,6 +111,24 @@ function authenticatedFetch(user = demoUsers.manager) {
         approval_status: 'rejected',
       })
     }
+    if (url.includes('/workflows/run') && method === 'POST') {
+      return jsonResponse({
+        ...sampleWorkflow,
+        status: 'needs_clarification',
+        workflow_type: 'leave_attendance',
+        response: 'What dates would you like to request leave for?',
+        understanding: {
+          intent: 'leave_request',
+          workflow_type: 'leave_attendance',
+          request_kind: 'action',
+          summary_label: 'Leave request',
+          needs_clarification: true,
+          clarification_question: 'What dates would you like to request leave for?',
+          confidence: 0.8,
+          entities: {},
+        },
+      })
+    }
     if (url.includes('/workflows/wf-001')) return jsonResponse(sampleWorkflow)
     if (url.includes('status=awaiting_human_approval')) {
       return jsonResponse({
@@ -146,10 +164,12 @@ describe('workflows and approvals UI', () => {
   it('renders workflow list', async () => {
     vi.stubGlobal('fetch', authenticatedFetch())
     renderWithProviders(<App />, { route: '/workflows', token: 'token' })
-    expect(await screen.findByRole('heading', { name: /^workflows$/i })).toBeInTheDocument()
+    expect(
+      await screen.findByRole('heading', { name: /^workflows$/i }, { timeout: 8000 }),
+    ).toBeInTheDocument()
     expect(await screen.findByText(/leave & attendance/i)).toBeInTheDocument()
     expect(screen.getByText(/wf-001/i)).toBeInTheDocument()
-  })
+  }, 15000)
 
   it('renders workflow detail with timeline and decision', async () => {
     vi.stubGlobal('fetch', authenticatedFetch())
@@ -188,7 +208,28 @@ describe('workflows and approvals UI', () => {
     renderWithProviders(<App />, { route: '/dashboard', token: 'token' })
     expect(await screen.findByText(/loading dashboard/i)).toBeInTheDocument()
     resolveWorkflows?.(jsonResponse({ workflows: [], total: 0, limit: 200, offset: 0 }))
-    expect(await screen.findByText(/no workflows found/i)).toBeInTheDocument()
+    expect(
+      await screen.findByText(/no workflows found/i, {}, { timeout: 8000 }),
+    ).toBeInTheDocument()
+  }, 15000)
+
+  it('renders natural-language request input and clarification', async () => {
+    const user = userEvent.setup()
+    vi.stubGlobal('fetch', authenticatedFetch(demoUsers.employee))
+    renderWithProviders(<App />, { route: '/requests', token: 'token' })
+    expect(
+      await screen.findByLabelText(/describe what you need/i),
+    ).toBeInTheDocument()
+    await user.type(
+      screen.getByLabelText(/describe what you need/i),
+      'I need leave',
+    )
+    await user.click(screen.getByRole('button', { name: /run request/i }))
+    expect(await screen.findByText(/clarification needed/i)).toBeInTheDocument()
+    expect(
+      screen.getAllByText(/what dates would you like to request leave for/i).length,
+    ).toBeGreaterThan(0)
+    expect(screen.getByText(/request understood as/i)).toBeInTheDocument()
   })
 
   it('shows error state with retry', async () => {

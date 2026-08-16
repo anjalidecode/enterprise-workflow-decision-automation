@@ -64,11 +64,14 @@ def test_admin_can_invite_and_assign_operational_roles() -> None:
                 "role": role,
                 "organization_id": "spoof-org",
                 "user_role": "admin",
+                **({"employee_id": "E002"} if role == "employee" else {}),
             },
         )
         assert invited.status_code == 200, invited.text
         payload = invited.json()
         assert payload["user"]["role"] == role
+        if role == "employee":
+            assert payload["user"]["employee_id"] == "E002"
         assert payload["user"]["status"] == "invited"
         assert payload["user"]["organization_id"] == "demo-org"
         assert payload["user"]["username"] == email
@@ -166,6 +169,7 @@ def test_duplicate_invite_email_rejected() -> None:
         "full_name": "Dup User",
         "email": "dup.user@example.com",
         "role": "employee",
+        "employee_id": "E003",
     }
     first = api.post("/api/v1/users/invite", headers=headers, json=body)
     assert first.status_code == 200, first.text
@@ -275,6 +279,7 @@ def test_cannot_admin_activate_invited_without_password() -> None:
             "full_name": "Pending User",
             "email": "pending.user@example.com",
             "role": "employee",
+            "employee_id": "E004",
         },
     )
     user_id = invited.json()["user"]["user_id"]
@@ -317,3 +322,142 @@ def test_invite_token_hash_not_plaintext() -> None:
     )
     assert "invite_token" not in detail.text
     assert "password_hash" not in detail.text
+
+
+def test_admin_directory_lists_org_employees_and_bindings() -> None:
+    api = client()
+    headers = _headers(api, "admin001")
+    response = api.get("/api/v1/employees", headers=headers)
+    assert response.status_code == 200, response.text
+    employees = {item["employee_id"]: item for item in response.json()["employees"]}
+    assert "E001" in employees
+    assert employees["E001"]["name"] == "Alex Rivera"
+    assert employees["E001"]["available"] is False
+    assert employees["E001"]["bound_user_id"] == "user-employee-001"
+    assert "leave_balances" not in employees["E001"]
+    assert employees["E002"]["available"] is True
+    assert api.get("/api/v1/employees", headers=_headers(api, "employee001")).status_code == 403
+
+
+def test_admin_can_bind_invited_employee_to_valid_record() -> None:
+    api = client()
+    headers = _headers(api, "admin001")
+    invited = api.post(
+        "/api/v1/users/invite",
+        headers=headers,
+        json={
+            "full_name": "Jordan Chen Account",
+            "email": "jordan.bound@example.com",
+            "role": "employee",
+            "employee_id": "E002",
+        },
+    )
+    assert invited.status_code == 200, invited.text
+    assert invited.json()["user"]["employee_id"] == "E002"
+    assert invited.json()["user"]["organization_id"] == "demo-org"
+
+
+def test_invite_employee_without_binding_is_rejected() -> None:
+    api = client()
+    headers = _headers(api, "admin001")
+    response = api.post(
+        "/api/v1/users/invite",
+        headers=headers,
+        json={
+            "full_name": "No Binding",
+            "email": "no.binding@example.com",
+            "role": "employee",
+        },
+    )
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "EMPLOYEE_BINDING_REQUIRED"
+
+
+def test_duplicate_employee_binding_rejected() -> None:
+    api = client()
+    headers = _headers(api, "admin001")
+    response = api.post(
+        "/api/v1/users/invite",
+        headers=headers,
+        json={
+            "full_name": "Dup Binding",
+            "email": "dup.binding@example.com",
+            "role": "employee",
+            "employee_id": "E001",
+        },
+    )
+    assert response.status_code == 409
+    assert response.json()["error"]["code"] == "EMPLOYEE_ALREADY_BOUND"
+
+
+def test_cross_organization_employee_binding_rejected() -> None:
+    api = client()
+    registered = api.post(
+        "/api/v1/auth/register",
+        json={
+            "full_name": "Other Admin",
+            "email": "other.admin.bind@example.com",
+            "password": "securePass-123",
+            "confirm_password": "securePass-123",
+            "organization_name": "Bind Isolation Org",
+        },
+    )
+    assert registered.status_code == 200, registered.text
+    token = _login(api, "other.admin.bind@example.com", "securePass-123").json()["access_token"]
+    headers = {"Authorization": f"Bearer {token}"}
+    directory = api.get("/api/v1/employees", headers=headers)
+    assert directory.status_code == 200
+    ids = {item["employee_id"] for item in directory.json()["employees"]}
+    assert "E001" not in ids
+    invited = api.post(
+        "/api/v1/users/invite",
+        headers=headers,
+        json={
+            "full_name": "Spoof Employee",
+            "email": "spoof.employee@example.com",
+            "role": "employee",
+            "employee_id": "E001",
+        },
+    )
+    assert invited.status_code == 400
+    assert invited.json()["error"]["code"] == "EMPLOYEE_NOT_FOUND"
+
+
+def test_arbitrary_employee_id_rejected() -> None:
+    api = client()
+    headers = _headers(api, "admin001")
+    response = api.post(
+        "/api/v1/users/invite",
+        headers=headers,
+        json={
+            "full_name": "Fake Record",
+            "email": "fake.record@example.com",
+            "role": "employee",
+            "employee_id": "E999",
+        },
+    )
+    assert response.status_code == 400
+    assert response.json()["error"]["code"] == "EMPLOYEE_NOT_FOUND"
+
+
+def test_admin_can_bind_existing_unbound_employee_via_patch() -> None:
+    api = client()
+    headers = _headers(api, "admin001")
+    invited = api.post(
+        "/api/v1/users/invite",
+        headers=headers,
+        json={
+            "full_name": "Later Bound",
+            "email": "later.bound@example.com",
+            "role": "hr",
+        },
+    )
+    user_id = invited.json()["user"]["user_id"]
+    patched = api.patch(
+        f"/api/v1/users/{user_id}",
+        headers=headers,
+        json={"role": "employee", "employee_id": "E005"},
+    )
+    assert patched.status_code == 200, patched.text
+    assert patched.json()["role"] == "employee"
+    assert patched.json()["employee_id"] == "E005"

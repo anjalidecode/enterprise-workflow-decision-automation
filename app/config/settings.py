@@ -16,10 +16,11 @@ class Settings(BaseSettings):
     )
 
     google_api_key: str = ""
-    gemini_model: str = "gemini-2.5-flash"
+    gemini_model: str = "gemini-3.5-flash"
+    llm_timeout_seconds: float = 60.0
     app_env: str = "development"
     app_name: str = "enterprise-workflow-decision-automation"
-    app_version: str = "0.7.0"
+    app_version: str = "0.8.0"
     api_v1_prefix: str = "/api/v1"
     api_host: str = "127.0.0.1"
     api_port: int = 8000

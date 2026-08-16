@@ -18,13 +18,16 @@ def _employee_key(employee_id: str) -> str:
     return employee_id.strip().upper()
 
 
+_DEFAULT_EMPLOYEE_ORG = "demo-org"
+
+
 def _org_matches(employee: dict[str, Any], organization_id: str) -> bool:
-    """Empty organization_id matches the current single-tenant seed data."""
+    """Seed records without organization_id belong to the demo tenant."""
 
     if not organization_id:
         return True
-    employee_org = str(employee.get("organization_id") or "")
-    return employee_org in {"", organization_id}
+    employee_org = str(employee.get("organization_id") or _DEFAULT_EMPLOYEE_ORG)
+    return employee_org == organization_id
 
 
 class SimulatedHRStore:

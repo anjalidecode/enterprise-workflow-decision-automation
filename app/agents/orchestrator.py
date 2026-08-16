@@ -12,8 +12,9 @@ LEAVE_KEYWORDS = ("leave", "time off", "pto", "vacation", "attendance")
 
 
 def orchestrator_agent(state: WorkflowState) -> dict[str, Any]:
+    existing = (state.get("workflow_type") or "").strip()
     request = state["user_request"].lower()
-    is_leave = any(keyword in request for keyword in LEAVE_KEYWORDS)
+    is_leave = existing == "leave_attendance" or any(keyword in request for keyword in LEAVE_KEYWORDS)
 
     if is_leave:
         workflow_type = "leave_attendance"
@@ -21,7 +22,7 @@ def orchestrator_agent(state: WorkflowState) -> dict[str, Any]:
         summary = "Classified request as leave_attendance and started the workflow."
         errors: list[str] = []
     else:
-        workflow_type = "unsupported"
+        workflow_type = existing or "unsupported"
         status = "in_progress"
         summary = "Request is not a leave & attendance workflow; marking as unsupported."
         errors = ["Unsupported workflow type for Module 1. Only leave & attendance is available."]

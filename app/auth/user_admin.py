@@ -9,8 +9,20 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.errors import APIError
+from app.auth.employee_binding import (
+    assert_employee_bindable,
+    binding_required_for_role,
+    list_organization_directory,
+)
 from app.auth.models import ASSIGNABLE_ROLES, Role, User, UserStatus
-from app.auth.schemas import InvitationInfo, InviteUserResponse, ManagedUserPublic, UserListResponse
+from app.auth.schemas import (
+    DirectoryEmployee,
+    EmployeeDirectoryResponse,
+    InvitationInfo,
+    InviteUserResponse,
+    ManagedUserPublic,
+    UserListResponse,
+)
 from app.auth.security import (
     generate_invite_token,
     hash_invite_token,
@@ -172,6 +184,24 @@ def list_users(
         raise _db_error(exc) from exc
 
 
+def list_employees(actor: User, *, session: Session | None = None) -> EmployeeDirectoryResponse:
+    def _run(db: Session) -> EmployeeDirectoryResponse:
+        items = list_organization_directory(db, actor.organization_id)
+        return EmployeeDirectoryResponse(
+            employees=[DirectoryEmployee.model_validate(item) for item in items]
+        )
+
+    try:
+        if session is not None:
+            return _run(session)
+        with session_scope() as db:
+            return _run(db)
+    except APIError:
+        raise
+    except (DatabaseNotConfiguredError, DatabaseUnavailableError) as exc:
+        raise _db_error(exc) from exc
+
+
 def get_user(actor: User, user_id: str, *, session: Session | None = None) -> ManagedUserPublic:
     def _run(db: Session) -> ManagedUserPublic:
         repo = UserRepository(db)
@@ -199,6 +229,7 @@ def invite_user(
     full_name: str,
     email: str,
     role: Role,
+    employee_id: str | None = None,
     session: Session | None = None,
 ) -> InviteUserResponse:
     _require_assignable_role(role)
@@ -228,6 +259,12 @@ def invite_user(
                 code="ACCOUNT_EXISTS",
                 message="An account with this email already exists.",
             )
+        bound_employee_id = assert_employee_bindable(
+            db,
+            organization_id=actor.organization_id,
+            employee_id=employee_id,
+            required=binding_required_for_role(role),
+        )
         try:
             return repo.create(
                 user_id=f"user-{uuid.uuid4().hex[:12]}",
@@ -235,7 +272,7 @@ def invite_user(
                 username=email_key,
                 password_hash=unusable_password_hash(),
                 role=role.value,
-                employee_id=None,
+                employee_id=bound_employee_id,
                 is_active=False,
                 full_name=name,
                 status=UserStatus.INVITED.value,
@@ -283,15 +320,17 @@ def patch_user(
     user_id: str,
     *,
     role: Role | None,
+    employee_id: str | None = None,
     session: Session | None = None,
 ) -> ManagedUserPublic:
-    if role is None:
+    if role is None and employee_id is None:
         raise APIError(
             status_code=400,
             code="INVALID_REQUEST",
-            message="Provide a role to update.",
+            message="Provide a role or employee binding to update.",
         )
-    _require_assignable_role(role)
+    if role is not None:
+        _require_assignable_role(role)
 
     def _run(db: Session) -> ManagedUserPublic:
         repo = UserRepository(db)
@@ -300,19 +339,30 @@ def patch_user(
             user_id=user_id,
             organization_id=actor.organization_id,
         )
-        _prevent_last_admin_loss(
-            repo,
-            organization_id=actor.organization_id,
-            target=record,
-            new_role=role.value,
-        )
+        next_role = Role(role.value) if role is not None else Role(record.role)
+        if role is not None:
+            _prevent_last_admin_loss(
+                repo,
+                organization_id=actor.organization_id,
+                target=record,
+                new_role=role.value,
+            )
         if actor.user_id == user_id:
             raise APIError(
                 status_code=400,
                 code="SELF_ACTION_FORBIDDEN",
-                message="You cannot change your own role.",
+                message="You cannot change your own role or employee binding.",
             )
-        record.role = role.value
+        if role is not None:
+            record.role = role.value
+        requested_employee_id = employee_id if employee_id is not None else record.employee_id
+        record.employee_id = assert_employee_bindable(
+            db,
+            organization_id=actor.organization_id,
+            employee_id=requested_employee_id,
+            required=binding_required_for_role(next_role),
+            exclude_user_id=record.user_id,
+        )
         db.flush()
         return to_managed_user(record)
 

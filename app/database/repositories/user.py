@@ -87,6 +87,32 @@ class UserRepository:
         stmt = select(UserRecord).where(UserRecord.invite_token_hash == token_hash)
         return self._session.scalars(stmt).first()
 
+    def list_bindings(self, organization_id: str) -> list[UserRecord]:
+        stmt = select(UserRecord).where(
+            UserRecord.organization_id == organization_id,
+            UserRecord.employee_id.is_not(None),
+            UserRecord.status.in_((UserStatus.ACTIVE.value, UserStatus.INVITED.value)),
+        )
+        return list(self._session.scalars(stmt).all())
+
+    def find_binding(
+        self,
+        organization_id: str,
+        employee_id: str,
+        *,
+        exclude_user_id: str | None = None,
+    ) -> UserRecord | None:
+        key = employee_id.strip().upper()
+        filters = [
+            UserRecord.organization_id == organization_id,
+            func.upper(UserRecord.employee_id) == key,
+            UserRecord.status.in_((UserStatus.ACTIVE.value, UserStatus.INVITED.value)),
+        ]
+        if exclude_user_id:
+            filters.append(UserRecord.user_id != exclude_user_id)
+        stmt = select(UserRecord).where(*filters)
+        return self._session.scalars(stmt).first()
+
     def list_for_organization(
         self,
         organization_id: str,

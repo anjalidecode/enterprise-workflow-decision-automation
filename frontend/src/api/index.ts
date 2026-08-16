@@ -10,6 +10,7 @@ import type {
   InviteUserResponse,
   ManagedUser,
   UserListResponse,
+  EmployeeDirectoryResponse,
   Workflow,
   WorkflowAudit,
   WorkflowListResponse,
@@ -77,11 +78,20 @@ export const usersApi = {
       body,
     })
   },
-  updateRole(userId: string, role: string): Promise<ManagedUser> {
+  listEmployees(): Promise<EmployeeDirectoryResponse> {
+    return apiRequest<EmployeeDirectoryResponse>('/employees')
+  },
+  update(
+    userId: string,
+    body: { role?: string; employee_id?: string | null },
+  ): Promise<ManagedUser> {
     return apiRequest<ManagedUser>(`/users/${encodeURIComponent(userId)}`, {
       method: 'PATCH',
-      body: { role },
+      body,
     })
+  },
+  updateRole(userId: string, role: string): Promise<ManagedUser> {
+    return this.update(userId, { role })
   },
   activate(userId: string): Promise<ManagedUser> {
     return apiRequest<ManagedUser>(`/users/${encodeURIComponent(userId)}/activate`, {

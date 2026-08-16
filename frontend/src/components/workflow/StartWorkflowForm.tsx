@@ -20,9 +20,9 @@ type Props = {
 
 export function StartWorkflowForm({
   defaultWorkflowType,
-  title = 'Start workflow',
-  description = 'Submit a structured HR request. Specialized agents execute the workflow — this is not a chat interface.',
-  placeholder = 'Describe the HR request…',
+  title = 'What would you like WorkSphere AI to do?',
+  description = 'Describe the HR request in your own words. Specialized agents execute the workflow — this is not a chat interface.',
+  placeholder = 'I need three days off next week…',
   lockedType = false,
 }: Props) {
   const { user } = useAuth()
@@ -48,8 +48,6 @@ export function StartWorkflowForm({
         setTypes(allowed)
         if (defaultWorkflowType) {
           setWorkflowType(defaultWorkflowType)
-        } else if (!workflowType && allowed[0]) {
-          setWorkflowType(allowed[0].workflow_type)
         }
       })
       .catch(() => {
@@ -146,14 +144,14 @@ export function StartWorkflowForm({
               ) : null}
             </select>
             <span className="form-hint">
-              Optional explicit type. Your identity comes from the signed-in session.
+              Leave as auto-route for natural-language requests. Explicit selection skips LLM routing.
             </span>
           </div>
           <div className="form-row">
-            <label htmlFor="workflow-request">Request</label>
+            <label htmlFor="workflow-request">Describe what you need</label>
             <textarea
               id="workflow-request"
-              className="textarea"
+              className="textarea textarea-nl"
               value={request}
               disabled={loading}
               placeholder={placeholder}
@@ -168,7 +166,7 @@ export function StartWorkflowForm({
           ) : null}
           <div className="split">
             <Button type="submit" variant="primary" disabled={loading}>
-              {loading ? 'Running workflow…' : 'Run workflow'}
+              {loading ? 'Running request…' : 'Run request'}
             </Button>
             {result ? (
               <Button

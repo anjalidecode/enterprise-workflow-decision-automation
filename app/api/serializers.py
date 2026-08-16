@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from app.api.schemas.workflows import (
+    RequestUnderstandingResponse,
     WorkflowAuditResponse,
     WorkflowDecisionResponse,
     WorkflowMetricsResponse,
@@ -67,6 +68,7 @@ def to_audit_response(result: WorkflowResult) -> WorkflowAuditResponse:
         pending_actions=list(audit.pending_actions),
         errors=list(audit.errors),
         approval_checkpoint=audit.approval_checkpoint,
+        llm=dict(audit.llm or {}),
     )
 
 
@@ -100,6 +102,23 @@ def to_metrics_response(result: WorkflowResult) -> WorkflowMetricsResponse:
     )
 
 
+def _understanding_response(state: dict[str, Any]) -> RequestUnderstandingResponse | None:
+    metadata = state.get("metadata") or {}
+    payload = metadata.get("request_understanding")
+    if not isinstance(payload, dict) or not payload:
+        return None
+    return RequestUnderstandingResponse(
+        intent=str(payload.get("intent") or ""),
+        workflow_type=str(payload.get("workflow_type") or ""),
+        request_kind=str(payload.get("request_kind") or ""),
+        summary_label=str(payload.get("summary_label") or ""),
+        needs_clarification=bool(payload.get("needs_clarification")),
+        clarification_question=str(payload.get("clarification_question") or ""),
+        confidence=float(payload.get("confidence") or 0.0),
+        entities=dict(payload.get("entities") or {}),
+    )
+
+
 def to_run_response(result: WorkflowResult, *, request_id: str = "") -> WorkflowRunResponse:
     state = result.state or {}
     audit = to_audit_response(result)
@@ -119,6 +138,7 @@ def to_run_response(result: WorkflowResult, *, request_id: str = "") -> Workflow
         metrics=to_metrics_response(result),
         router_status=result.router.status if result.router else None,
         request_id=request_id or str(state.get("request_id") or ""),
+        understanding=_understanding_response(state),
     )
 
 

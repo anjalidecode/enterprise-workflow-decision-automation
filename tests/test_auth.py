@@ -156,6 +156,69 @@ def test_auth_me(client: TestClient) -> None:
     assert "password_hash" not in body
 
 
+def test_employee001_bound_to_e001(client: TestClient) -> None:
+    with session_scope() as session:
+        user = UserRepository(session).get_auth_user_by_username("employee001")
+    assert user is not None
+    assert user.role.value == "employee"
+    assert user.organization_id == "demo-org"
+    assert user.employee_id == "E001"
+
+
+def test_employee_login_jwt_contains_employee_id(client: TestClient) -> None:
+    response = _login(client, "employee001")
+    assert response.status_code == 200
+    token = response.json()["access_token"]
+    payload = jwt.decode(
+        token,
+        get_settings().resolved_jwt_secret,
+        algorithms=[get_settings().jwt_algorithm],
+    )
+    assert payload["sub"] == "user-employee-001"
+    assert payload["organization_id"] == "demo-org"
+    assert payload["role"] == "employee"
+    assert payload["employee_id"] == "E001"
+    assert "password" not in payload
+    assert "password_hash" not in payload
+    assert response.json()["user"]["employee_id"] == "E001"
+
+
+def test_employee_cannot_override_employee_id_in_request_body(client: TestClient) -> None:
+    headers = _headers(client, "employee001")
+    ignored = client.post(
+        "/api/v1/workflows/run",
+        headers=headers,
+        json={
+            "request": "I need three days off next week. Can you check if I have enough leave?",
+            "employee_id": "E002",
+        },
+    )
+    assert ignored.status_code == 200, ignored.text
+    entities = (ignored.json().get("understanding") or {}).get("entities") or {}
+    assert entities.get("employee_id") == "E001"
+
+    blocked = client.post(
+        "/api/v1/workflows/run",
+        headers=headers,
+        json={"request": LEAVE_OTHER, "employee_id": "E002"},
+    )
+    assert blocked.status_code == 403
+    assert blocked.json()["error"]["code"] == "FORBIDDEN"
+
+
+def test_employee_cannot_bind_themselves_to_another_employee(client: TestClient) -> None:
+    headers = _headers(client, "employee001")
+    response = client.patch(
+        "/api/v1/users/user-employee-001",
+        headers=headers,
+        json={"employee_id": "E002"},
+    )
+    assert response.status_code == 403
+    assert response.json()["error"]["code"] == "FORBIDDEN"
+    me = client.get("/api/v1/auth/me", headers=headers)
+    assert me.json()["employee_id"] == "E001"
+
+
 def test_employee_own_data_and_blocked_other(client: TestClient) -> None:
     headers = _headers(client, "employee001")
     own = client.post(

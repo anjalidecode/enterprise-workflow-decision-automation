@@ -262,17 +262,60 @@ export function AuditSummary({ audit }: { audit: WorkflowAudit | null }) {
 }
 
 export function WorkflowResultBanner({ workflow }: { workflow: Workflow }) {
+  const understanding = workflow.understanding
+  const nextAction = workflow.approval_status === 'awaiting'
+    ? 'Waiting for human approval'
+    : workflow.status === 'needs_clarification'
+      ? understanding?.clarification_question || workflow.response
+      : workflow.status === 'unsupported'
+        ? 'No workflow executed'
+        : workflow.decision?.outcome
+          ? `Decision: ${workflow.decision.outcome}`
+          : workflow.status
+
   return (
     <div className="card">
       <div className="card-body stack-sm">
-        <div className="split" style={{ justifyContent: 'space-between' }}>
+        {understanding?.summary_label || understanding?.workflow_type ? (
+          <div>
+            <div className="muted">Request understood as</div>
+            <p>
+              <strong>
+                {understanding.summary_label ||
+                  workflowTypeLabel(understanding.workflow_type || workflow.workflow_type)}
+              </strong>
+            </p>
+          </div>
+        ) : (
           <div>
             <div className="muted">Workflow</div>
+            <p>
+              <strong>{workflowTypeLabel(workflow.workflow_type)}</strong>
+            </p>
+          </div>
+        )}
+        <div className="split" style={{ justifyContent: 'space-between' }}>
+          <div>
+            <div className="muted">Run</div>
             <Link to={`/workflows/${workflow.workflow_id}`} className="mono">
               {workflow.workflow_id}
             </Link>
           </div>
           <StatusBadge status={workflow.status} />
+        </div>
+        {understanding?.needs_clarification || workflow.status === 'needs_clarification' ? (
+          <div className="callout callout-warning">
+            <div className="muted">Clarification needed</div>
+            <p>
+              {understanding?.clarification_question ||
+                workflow.response ||
+                'Please provide the missing details.'}
+            </p>
+          </div>
+        ) : null}
+        <div>
+          <div className="muted">Decision / next action</div>
+          <p>{nextAction}</p>
         </div>
         <div>
           <div className="muted">Final response</div>

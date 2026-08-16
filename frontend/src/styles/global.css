@@ -599,6 +599,20 @@ table.data-table tbody tr:hover {
   resize: vertical;
 }
 
+.textarea-nl {
+  min-height: 140px;
+}
+
+.callout {
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 0.9rem;
+}
+
+.callout-warning {
+  background: var(--warning-soft);
+  border: 1px solid #fdba74;
+}
+
 .input:focus,
 .select:focus,
 .textarea:focus {

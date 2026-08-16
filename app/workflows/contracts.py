@@ -63,6 +63,7 @@ class WorkflowAuditSnapshot(BaseModel):
     completed_actions: list[dict[str, Any]] = Field(default_factory=list)
     errors: list[str] = Field(default_factory=list)
     approval_checkpoint: dict[str, Any] | None = None
+    llm: dict[str, Any] = Field(default_factory=dict)
 
 
 class WorkflowRunMetrics(BaseModel):

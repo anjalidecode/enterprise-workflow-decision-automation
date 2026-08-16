@@ -89,6 +89,15 @@ class InviteUserRequest(BaseModel):
     full_name: str = Field(..., min_length=1)
     email: str = Field(..., min_length=3)
     role: Role
+    employee_id: str | None = None
+
+    @field_validator("employee_id")
+    @classmethod
+    def employee_id_optional(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip().upper()
+        return cleaned or None
 
     @field_validator("full_name")
     @classmethod
@@ -113,6 +122,15 @@ class PatchUserRequest(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
     role: Role | None = None
+    employee_id: str | None = None
+
+    @field_validator("employee_id")
+    @classmethod
+    def employee_id_optional(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip().upper()
+        return cleaned or None
 
 
 class ActivateAccountRequest(BaseModel):
@@ -160,3 +178,18 @@ class InviteUserResponse(BaseModel):
     message: str
     user: ManagedUserPublic
     invitation: InvitationInfo
+
+
+class DirectoryEmployee(BaseModel):
+    employee_id: str
+    name: str
+    department: str | None = None
+    job_role: str | None = None
+    employment_status: str | None = None
+    bound_user_id: str | None = None
+    bound_username: str | None = None
+    available: bool = True
+
+
+class EmployeeDirectoryResponse(BaseModel):
+    employees: list[DirectoryEmployee]

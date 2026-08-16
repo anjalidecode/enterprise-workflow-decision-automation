@@ -23,7 +23,10 @@ ONBOARDING_TASKS = [
 
 def onboarding_planner_agent(state: WorkflowState) -> dict[str, Any]:
     parsed = parse_onboarding_request(state["user_request"])
-    entities = merge_entities(state, employee_id=parsed.get("employee_id"))
+    incoming = dict(state.get("entities") or {})
+    employee_id = incoming.get("employee_id") or parsed.get("employee_id")
+    parsed["employee_id"] = employee_id
+    entities = merge_entities(state, employee_id=employee_id)
     metadata = {
         **state.get("metadata", {}),
         "onboarding_request": parsed,

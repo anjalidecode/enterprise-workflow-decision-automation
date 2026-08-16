@@ -9,6 +9,7 @@ from fastapi import APIRouter, Depends, Query
 from app.auth.dependencies import require_admin
 from app.auth.models import User
 from app.auth.schemas import (
+    EmployeeDirectoryResponse,
     InviteUserRequest,
     InviteUserResponse,
     ManagedUserPublic,
@@ -20,6 +21,7 @@ from app.auth.user_admin import (
     deactivate_user,
     get_user,
     invite_user,
+    list_employees,
     list_users,
     patch_user,
 )
@@ -51,6 +53,15 @@ def list_users_endpoint(
     )
 
 
+@router.get(
+    "/employees",
+    response_model=EmployeeDirectoryResponse,
+    summary="List organization employee records available for account binding",
+)
+def list_employees_endpoint(admin: AdminUser) -> EmployeeDirectoryResponse:
+    return list_employees(admin)
+
+
 @router.post(
     "/users/invite",
     response_model=InviteUserResponse,
@@ -62,6 +73,7 @@ def invite_user_endpoint(admin: AdminUser, body: InviteUserRequest) -> InviteUse
         full_name=body.full_name,
         email=body.email,
         role=body.role,
+        employee_id=body.employee_id,
     )
 
 
@@ -77,14 +89,14 @@ def get_user_endpoint(admin: AdminUser, user_id: str) -> ManagedUserPublic:
 @router.patch(
     "/users/{user_id}",
     response_model=ManagedUserPublic,
-    summary="Update an organization user's role",
+    summary="Update an organization user's role or employee binding",
 )
 def patch_user_endpoint(
     admin: AdminUser,
     user_id: str,
     body: PatchUserRequest,
 ) -> ManagedUserPublic:
-    return patch_user(admin, user_id, role=body.role)
+    return patch_user(admin, user_id, role=body.role, employee_id=body.employee_id)
 
 
 @router.post(

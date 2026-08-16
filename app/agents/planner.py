@@ -22,6 +22,17 @@ LEAVE_TASKS = [
 
 def planner_agent(state: WorkflowState) -> dict[str, Any]:
     parsed = parse_leave_request(state["user_request"])
+    incoming = dict(state.get("entities") or {})
+    employee_id = incoming.get("employee_id") or parsed.employee_id
+    days = incoming.get("days") or incoming.get("duration_days") or parsed.days
+    start_date = incoming.get("start_date") or parsed.start_date
+    if not start_date:
+        dates = incoming.get("dates") or []
+        if isinstance(dates, list) and dates:
+            start_date = dates[0]
+    parsed.employee_id = employee_id
+    parsed.days = int(days) if days is not None else None
+    parsed.start_date = start_date
     leave_request = parsed.model_dump()
     errors: list[str] = []
 
