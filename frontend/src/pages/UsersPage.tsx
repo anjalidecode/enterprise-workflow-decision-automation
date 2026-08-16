@@ -38,6 +38,7 @@ export function UsersPage() {
   const [inviteLoading, setInviteLoading] = useState(false)
   const [inviteError, setInviteError] = useState<string | null>(null)
   const [inviteLink, setInviteLink] = useState<string | null>(null)
+  const [inviteNotice, setInviteNotice] = useState<string | null>(null)
 
   const [detail, setDetail] = useState<ManagedUser | null>(null)
   const [pendingRole, setPendingRole] = useState<Role | ''>('')
@@ -83,6 +84,7 @@ export function UsersPage() {
     setInviteEmployeeId('')
     setInviteError(null)
     setInviteLink(null)
+    setInviteNotice(null)
     setInviteLoading(false)
   }
 
@@ -119,9 +121,13 @@ export function UsersPage() {
         employee_id: inviteRole === 'employee' ? inviteEmployeeId : undefined,
       })
       setInviteLink(result.invitation.activation_path)
+      setInviteNotice(result.message)
       notify({
-        tone: 'success',
-        title: 'Invitation created',
+        tone: result.notification?.status === 'failed' ? 'warning' : 'success',
+        title:
+          result.notification?.status === 'failed'
+            ? 'Invitation created'
+            : 'Invitation created',
         message: result.message,
       })
       await load()
@@ -410,9 +416,9 @@ export function UsersPage() {
       >
         {inviteLink ? (
           <div className="stack-sm">
-            <p>
-              Invitation created. Email delivery is not enabled yet — share this activation
-              link with the user.
+            <p>{inviteNotice || 'Invitation created successfully.'}</p>
+            <p className="muted">
+              You can also share this activation link if the invitee did not receive email:
             </p>
             <code className="invite-link">{inviteLink}</code>
           </div>

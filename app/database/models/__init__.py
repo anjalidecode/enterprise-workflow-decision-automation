@@ -7,6 +7,7 @@ from app.database.models.decision import DecisionRecord
 from app.database.models.approval import ApprovalRecord
 from app.database.models.audit import AuditRecord
 from app.database.models.metrics import MetricsRecord
+from app.database.models.notification import NotificationEventRecord
 
 __all__ = [
     "Organization",
@@ -16,4 +17,5 @@ __all__ = [
     "ApprovalRecord",
     "AuditRecord",
     "MetricsRecord",
+    "NotificationEventRecord",
 ]

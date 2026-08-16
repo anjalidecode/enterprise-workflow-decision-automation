@@ -8,7 +8,7 @@ Intelligent HR workflows powered by specialized agents, policy-aware decisions, 
 
 The customer-facing product name is **WorkSphere AI**. The repository name is for source control only.
 
-## Current status (Modules 1–5F)
+## Current status (Modules 1–5G)
 
 | Module | Scope |
 |--------|--------|
@@ -22,6 +22,7 @@ The customer-facing product name is **WorkSphere AI**. The repository name is fo
 | **5D** | WorkSphere AI professional React frontend + public registration |
 | **5E** | Admin user management, invitations, and role assignment |
 | **5F** | Gemini request understanding + grounded responses (optional API key) |
+| **5G** | Email notification system (console + SMTP providers) |
 
 **Do not treat the stack as production-ready.** Domain HR JSON stores remain simulated. Docker and cloud deployment are later phases.
 
@@ -172,11 +173,87 @@ Organization administrators can open **User Management** (`/users` or Settings �
 - Change operational roles
 - Deactivate / reactivate accounts
 
-Invited users cannot sign in until they set a password at `/activate` with a one-time, expiring token. The invite API returns an activation link for this phase. **Email delivery is not implemented** (planned for a later notification phase). Tokens are stored hashed; passwords are stored as bcrypt hashes only.
+Invited users cannot sign in until they set a password at `/activate` with a one-time, expiring token. Invitation emails are sent through the notification system (console or SMTP). The invite API still returns an activation link so admins can share it if delivery fails. Tokens are stored hashed; passwords are stored as bcrypt hashes only.
 
 An administrator cannot deactivate themselves or leave the organization with zero admins.
 
 Inactive and invited accounts are rejected at login. Authorization uses the authenticated JWT user — the API ignores client-supplied `role`, `organization_id`, and `employee_id`.
+
+## Email notifications (Module 5G)
+
+WorkSphere AI sends transactional email for meaningful business events. Agents never call SMTP; they continue to use `NotificationServicePort` / `notify_*` tools. Auth and workflow layers emit typed events to `BusinessNotificationService` → `EmailProviderPort`.
+
+```
+Business event
+     ↓
+BusinessNotificationService (templates, recipients, idempotency)
+     ↓
+EmailProviderPort
+     ↓
+Console provider (dev)  OR  SMTP provider (real delivery)
+     ↓
+Recipient email
+```
+
+### Event types
+
+| Event | When | Recipient |
+|-------|------|-----------|
+| `USER_REGISTERED` | First user creates a new organization | New admin |
+| `USER_INVITED` | Admin invites employee/manager/hr | Invitee |
+| `WORKFLOW_PENDING_APPROVAL` | Workflow enters `awaiting_human_approval` | Authorized approvers |
+| `WORKFLOW_APPROVED` | Approver approves | Requester |
+| `WORKFLOW_REJECTED` | Approver rejects / decision reject | Requester |
+| `WORKFLOW_COMPLETED` | Meaningful auto-complete outcome | Requester |
+| `WORKFLOW_BLOCKED` | Blocked outcome | Requester |
+
+Recipients are resolved from PostgreSQL users (organization-scoped). Client-supplied `recipient_email` / `approver_email` are ignored.
+
+### Development (console)
+
+```bash
+EMAIL_PROVIDER=console
+FRONTEND_BASE_URL=http://127.0.0.1:5173
+```
+
+Console mode prints a safe email preview (event, recipient, subject, body). No SMTP credentials required. Invitation activation tokens appear only inside the rendered activation link for local testing — they are not written to ordinary structured logs as bare secrets.
+
+### Real SMTP
+
+```bash
+EMAIL_PROVIDER=smtp
+SMTP_HOST=...
+SMTP_PORT=587
+SMTP_USERNAME=...
+SMTP_PASSWORD=...
+SMTP_FROM_EMAIL=...
+SMTP_FROM_NAME=WorkSphere AI
+SMTP_USE_TLS=true
+FRONTEND_BASE_URL=https://your-app.example.com
+```
+
+Never commit real SMTP credentials. Never put SMTP settings in frontend env vars.
+
+### Failure handling & idempotency
+
+- Account creation and workflow decisions succeed even when email fails.
+- Successful deliveries are idempotent via `notification_events` (`organization_id` + `idempotency_key`).
+- Failed deliveries can be retried without duplicating a prior successful send.
+- Low-cardinality metrics: `notification_sent_total`, `notification_failed_total`, `notification_latency_seconds` (labels: provider, event_type, status only).
+
+### Local testing
+
+1. `EMAIL_PROVIDER=console`
+2. Register a new organization → welcome preview in the API console
+3. Admin → User Management → Invite → invitation preview + activation link
+4. Employee submits a leave request that needs approval → approver preview
+5. Approver approves/rejects → requester preview
+
+Apply the Alembic migration after pull:
+
+```bash
+alembic upgrade head
+```
 
 ### Frontend tests
 
@@ -187,12 +264,10 @@ npm test
 
 ### Frontend limitations
 
-- No `GET /employees` directory endpoint — Employees page uses auth identity + workflow activity
 - No dedicated approvals inbox endpoint — Approvals page filters `status=awaiting_human_approval`
 - Workflow list summaries do not include `user_id` / “requested by”
 - JWT stored in `localStorage` for development convenience (not production hardening)
-- UI notifications are toasts, not email
-- Invitation links are shown to the inviting admin; outbound email is not sent
+- Toast UI confirms invitation/registration; outbound email uses the backend notification providers
 
 ## PostgreSQL setup (Module 5C)
 
@@ -377,4 +452,5 @@ python run.py "Find candidates for the Python Backend Developer position."
 |-------|---------|
 | **5E** | Admin user management complete in this phase |
 | **5F** | Gemini NL understanding complete in this phase |
-| **Later** | Monitoring, deployment, email notifications, deeper persistence |
+| **5G** | Email notification system complete in this phase |
+| **Later** | Monitoring, deployment, deeper persistence |

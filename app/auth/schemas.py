@@ -69,9 +69,19 @@ class UserPublic(BaseModel):
     status: UserStatus = UserStatus.ACTIVE
 
 
+class NotificationInfo(BaseModel):
+    """Safe notification delivery summary — never includes secrets or tokens."""
+
+    event_type: str | None = None
+    status: str
+    message: str
+    provider: str = ""
+
+
 class RegisterResponse(BaseModel):
     message: str
     user: UserPublic
+    notification: NotificationInfo | None = None
 
 
 class TokenResponse(BaseModel):
@@ -178,6 +188,7 @@ class InviteUserResponse(BaseModel):
     message: str
     user: ManagedUserPublic
     invitation: InvitationInfo
+    notification: NotificationInfo | None = None
 
 
 class DirectoryEmployee(BaseModel):

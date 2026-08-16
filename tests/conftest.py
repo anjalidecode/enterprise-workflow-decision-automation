@@ -41,6 +41,7 @@ def _configure_test_database() -> str:
     )
     os.environ["DATABASE_URL"] = url
     os.environ.setdefault("APP_ENV", "test")
+    os.environ.setdefault("EMAIL_PROVIDER", "console")
     # Tests must never call the real Gemini API, even if a local .env has a key.
     os.environ["GOOGLE_API_KEY"] = ""
     return url
@@ -78,7 +79,8 @@ def _truncate_and_seed() -> None:
         conn.execute(
             text(
                 "TRUNCATE TABLE "
-                "metrics, audits, decisions, approvals, workflow_runs, users, organizations "
+                "notification_events, metrics, audits, decisions, approvals, "
+                "workflow_runs, users, organizations "
                 "RESTART IDENTITY CASCADE"
             )
         )
@@ -92,6 +94,7 @@ def reset_simulated_runtime() -> None:
 
     from app.llm.factory import reset_llm_client
     from app.llm.metrics import reset_llm_metrics
+    from app.notifications import reset_business_notification_service
 
     get_settings.cache_clear()
 
@@ -104,6 +107,7 @@ def reset_simulated_runtime() -> None:
     reset_offboarding_store()
     reset_hr_services_store()
     reset_notification_service()
+    reset_business_notification_service()
     reset_registry()
     reset_memory()
     reset_execution_index()
@@ -123,6 +127,7 @@ def reset_simulated_runtime() -> None:
     reset_offboarding_store()
     reset_hr_services_store()
     reset_notification_service()
+    reset_business_notification_service()
     reset_memory()
     reset_workflow_engine(with_persistence=False)
     reset_execution_index()

@@ -3,6 +3,10 @@
 Usage:
     python -m app.database.seed
 
+To remove local registration/invite test accounts (keeps demo-org / other-org):
+    python -m app.database.dev_cleanup --dry-run
+    python -m app.database.dev_cleanup --confirm --reseed
+
 Requires DATABASE_URL. Stores bcrypt password hashes only — never plaintext.
 Demo password is documented in README for local development only.
 """

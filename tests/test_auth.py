@@ -456,7 +456,10 @@ def test_register_first_org_user_becomes_admin(client: TestClient) -> None:
     response = client.post("/api/v1/auth/register", json=_register_payload())
     assert response.status_code == 200, response.text
     body = response.json()
-    assert body["message"] == "Account created successfully."
+    assert body["message"].startswith("Account created successfully.")
+    assert body["notification"]["event_type"] == "USER_REGISTERED"
+    assert body["notification"]["status"] in {"generated", "sent"}
+    assert "password" not in body["message"].lower()
     assert body["user"]["username"] == "alex.rivera@northwind.test"
     assert body["user"]["role"] == "admin"
     assert body["user"]["organization_id"] == "northwind-hr"

@@ -10,12 +10,18 @@ from sqlalchemy.orm import Session
 
 from app.api.errors import APIError
 from app.auth.models import Role, User, UserStatus
-from app.auth.schemas import RegisterResponse, TokenResponse, UserPublic
+from app.auth.schemas import NotificationInfo, RegisterResponse, TokenResponse, UserPublic
 from app.auth.security import create_access_token, hash_password, verify_password
 from app.database.errors import DatabaseNotConfiguredError, DatabaseUnavailableError
 from app.database.repositories.organization import OrganizationRepository
 from app.database.repositories.user import UserRepository, to_auth_user
 from app.database.session import session_scope
+from app.notifications.models import NotificationEventPayload, NotificationEventType
+from app.notifications.service import (
+    frontend_url,
+    get_business_notification_service,
+    role_label,
+)
 
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 _ORG_SLUG_RE = re.compile(r"[^a-z0-9]+")
@@ -183,7 +189,7 @@ def register(
         organization_name=organization_name,
     )
 
-    def _register(db: Session) -> User:
+    def _register(db: Session) -> tuple[User, bool, str]:
         users = UserRepository(db)
         orgs = OrganizationRepository(db)
         if users.get_by_username(email_key) is not None:
@@ -226,14 +232,26 @@ def register(
                 code="ACCOUNT_EXISTS",
                 message="An account with this email already exists.",
             ) from exc
-        return to_auth_user(record)
+        return to_auth_user(record), created_org, existing.name
 
     try:
         if session is not None:
-            user = _register(session)
+            user, created_org, organization_display_name = _register(session)
+            notification = _maybe_welcome_email(
+                session,
+                user=user,
+                created_org=created_org,
+                organization_name=organization_display_name,
+            )
         else:
             with session_scope() as db:
-                user = _register(db)
+                user, created_org, organization_display_name = _register(db)
+                notification = _maybe_welcome_email(
+                    db,
+                    user=user,
+                    created_org=created_org,
+                    organization_name=organization_display_name,
+                )
     except APIError:
         raise
     except IntegrityError as exc:
@@ -255,7 +273,50 @@ def register(
             message=str(exc),
         ) from exc
 
+    message = "Account created successfully."
+    if notification is not None:
+        if notification.status == "failed":
+            message = f"Account created. {notification.message}"
+        else:
+            message = f"{message} {notification.message}".strip()
     return RegisterResponse(
-        message="Account created successfully.",
+        message=message,
         user=to_public_user(user),
+        notification=notification,
+    )
+
+
+def _maybe_welcome_email(
+    session: Session,
+    *,
+    user: User,
+    created_org: bool,
+    organization_name: str,
+) -> NotificationInfo | None:
+    """Welcome email only for first user of a new organization. Failures do not roll back."""
+
+    if not created_org:
+        return None
+    result = get_business_notification_service().dispatch(
+        NotificationEventPayload(
+            event_type=NotificationEventType.USER_REGISTERED,
+            organization_id=user.organization_id,
+            idempotency_key=f"USER_REGISTERED:{user.user_id}",
+            recipient_user_id=user.user_id,
+            recipient_email=user.username,
+            recipient_name=user.full_name or user.username,
+            context={
+                "organization_name": organization_name,
+                "role": user.role.value,
+                "role_label": role_label(user.role.value),
+                "login_url": frontend_url("/login"),
+            },
+        ),
+        session=session,
+    )
+    return NotificationInfo(
+        event_type=result.event_type.value if result.event_type else None,
+        status=result.status.value,
+        message=result.public_message,
+        provider=result.provider,
     )

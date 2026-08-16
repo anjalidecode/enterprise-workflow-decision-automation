@@ -419,9 +419,15 @@ class WorkflowEngine:
         self._load_checkpoint = load_checkpoint
 
     def _maybe_persist(self, result: WorkflowResult) -> WorkflowResult:
-        if self._persist_result is None:
-            return result
-        self._persist_result(result)
+        if self._persist_result is not None:
+            self._persist_result(result)
+        # Email is a side effect — never fail the workflow because of delivery.
+        try:
+            from app.notifications.workflow_hooks import emit_workflow_notifications
+
+            emit_workflow_notifications(result)
+        except Exception:  # noqa: BLE001
+            pass
         return result
 
     def run(

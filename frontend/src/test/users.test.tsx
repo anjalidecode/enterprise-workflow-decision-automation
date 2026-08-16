@@ -54,7 +54,7 @@ function usersFetch(options?: {
         role: string
       }
       return jsonResponse({
-        message: 'Invitation created.',
+        message: 'Invitation created successfully. Invitation notification generated.',
         user: {
           user_id: 'u-new',
           username: body.email,
@@ -70,6 +70,12 @@ function usersFetch(options?: {
           expires_at: '2026-08-22T10:00:00Z',
           activation_path: '/activate?token=abc',
           activation_token: 'abc',
+        },
+        notification: {
+          event_type: 'USER_INVITED',
+          status: 'generated',
+          message: 'Invitation notification generated.',
+          provider: 'console',
         },
       })
     }
@@ -169,8 +175,13 @@ describe('user management', () => {
     await user.type(screen.getByLabelText(/work email/i), 'amit@worksphere.test')
     await user.selectOptions(screen.getByLabelText(/^role$/i), 'hr')
     await user.click(screen.getByRole('button', { name: /send invitation/i }))
-    expect(await screen.findByText(/email delivery is not enabled/i)).toBeInTheDocument()
-    expect(screen.getByText('/activate?token=abc')).toBeInTheDocument()
+    expect(
+      await screen.findByText('/activate?token=abc'),
+    ).toBeInTheDocument()
+    expect(
+      screen.getAllByText(/Invitation created successfully\. Invitation notification generated\./i)
+        .length,
+    ).toBeGreaterThan(0)
   }, 15000)
 
   it('shows invite permission errors', async () => {

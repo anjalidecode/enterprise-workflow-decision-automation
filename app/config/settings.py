@@ -37,6 +37,22 @@ class Settings(BaseSettings):
     database_pool_size: int = 5
     database_max_overflow: int = 10
 
+    # Public frontend base URL for email links (activation, login, approvals).
+    # Override for deployment; do not assume 127.0.0.1 in production.
+    frontend_base_url: str = "http://127.0.0.1:5173"
+
+    # Email notifications (Module 5G). Default console is safe for local development.
+    # Never expose SMTP credentials to the React frontend.
+    email_provider: str = "console"
+    smtp_host: str = ""
+    smtp_port: int = 587
+    smtp_username: str = ""
+    smtp_password: str = ""
+    smtp_from_email: str = ""
+    smtp_from_name: str = "WorkSphere AI"
+    smtp_use_tls: bool = True
+    smtp_timeout_seconds: float = 30.0
+
     @property
     def has_llm_credentials(self) -> bool:
         return bool(self.google_api_key.strip())

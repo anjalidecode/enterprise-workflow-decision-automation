@@ -21,6 +21,7 @@ from app.auth.schemas import (
     InvitationInfo,
     InviteUserResponse,
     ManagedUserPublic,
+    NotificationInfo,
     UserListResponse,
 )
 from app.auth.security import (
@@ -32,8 +33,15 @@ from app.auth.security import (
 from app.auth.service import _EMAIL_RE, validate_password
 from app.database.errors import DatabaseNotConfiguredError, DatabaseUnavailableError
 from app.database.models.user import UserRecord
+from app.database.repositories.organization import OrganizationRepository
 from app.database.repositories.user import UserRepository, to_auth_user
 from app.database.session import session_scope
+from app.notifications.models import NotificationEventPayload, NotificationEventType
+from app.notifications.service import (
+    frontend_url,
+    get_business_notification_service,
+    role_label,
+)
 
 INVITE_TTL_DAYS = 7
 
@@ -289,9 +297,23 @@ def invite_user(
     try:
         if session is not None:
             record = _run(session)
+            notification = _send_invitation_email(
+                session,
+                record=record,
+                token=token,
+                expires_at=expires_at,
+                organization_id=actor.organization_id,
+            )
         else:
             with session_scope() as db:
                 record = _run(db)
+                notification = _send_invitation_email(
+                    db,
+                    record=record,
+                    token=token,
+                    expires_at=expires_at,
+                    organization_id=actor.organization_id,
+                )
     except APIError:
         raise
     except IntegrityError as exc:
@@ -303,15 +325,60 @@ def invite_user(
     except (DatabaseNotConfiguredError, DatabaseUnavailableError) as exc:
         raise _db_error(exc) from exc
 
+    activation_path = f"/activate?token={token}"
+    base_message = "Invitation created successfully."
+    message = (
+        f"{base_message} {notification.message}".strip()
+        if notification is not None
+        else base_message
+    )
     return InviteUserResponse(
-        message="Invitation created. Share the activation link with the user. "
-        "Email delivery is not implemented in this phase.",
+        message=message,
         user=to_managed_user(record),
         invitation=InvitationInfo(
             expires_at=expires_at.isoformat(),
-            activation_path=f"/activate?token={token}",
+            activation_path=activation_path,
             activation_token=token,
         ),
+        notification=notification,
+    )
+
+
+def _send_invitation_email(
+    session: Session,
+    *,
+    record: UserRecord,
+    token: str,
+    expires_at: datetime,
+    organization_id: str,
+) -> NotificationInfo:
+    org = OrganizationRepository(session).get_by_organization_id(organization_id)
+    org_name = org.name if org is not None else organization_id
+    # Activation link uses the existing one-time token mechanism. Do not log the raw token.
+    activation_url = frontend_url(f"/activate?token={token}")
+    result = get_business_notification_service().dispatch(
+        NotificationEventPayload(
+            event_type=NotificationEventType.USER_INVITED,
+            organization_id=organization_id,
+            idempotency_key=f"USER_INVITED:{record.user_id}",
+            recipient_user_id=record.user_id,
+            recipient_email=record.username,
+            recipient_name=record.full_name or record.username,
+            context={
+                "organization_name": org_name,
+                "role": record.role,
+                "role_label": role_label(record.role),
+                "activation_url": activation_url,
+                "expires_at": expires_at.isoformat(),
+            },
+        ),
+        session=session,
+    )
+    return NotificationInfo(
+        event_type=result.event_type.value if result.event_type else None,
+        status=result.status.value,
+        message=result.public_message,
+        provider=result.provider,
     )
 
 

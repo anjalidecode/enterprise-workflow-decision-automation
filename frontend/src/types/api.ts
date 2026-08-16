@@ -65,6 +65,19 @@ export interface EmployeeDirectoryResponse {
   employees: DirectoryEmployee[]
 }
 
+export interface NotificationInfo {
+  event_type?: string | null
+  status: string
+  message: string
+  provider?: string
+}
+
+export interface RegisterResponse {
+  message: string
+  user: User
+  notification?: NotificationInfo | null
+}
+
 export interface InviteUserResponse {
   message: string
   user: ManagedUser
@@ -73,6 +86,7 @@ export interface InviteUserResponse {
     activation_path: string
     activation_token: string
   }
+  notification?: NotificationInfo | null
 }
 
 export interface ActivateAccountRequest {

@@ -4,6 +4,7 @@ import type {
   HealthResponse,
   LoginRequest,
   RegisterRequest,
+  RegisterResponse,
   TokenResponse,
   User,
   InviteUserRequest,
@@ -27,8 +28,8 @@ export const authApi = {
       token: null,
     })
   },
-  register(body: RegisterRequest): Promise<{ message: string; user: User }> {
-    return apiRequest<{ message: string; user: User }>('/auth/register', {
+  register(body: RegisterRequest): Promise<RegisterResponse> {
+    return apiRequest<RegisterResponse>('/auth/register', {
       method: 'POST',
       body,
       token: null,
